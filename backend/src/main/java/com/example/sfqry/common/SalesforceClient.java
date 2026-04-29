@@ -5,6 +5,8 @@ import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.query.QueryResultDto;
 
 public interface SalesforceClient {
+    LoginResult login(String email, String password);
+
     QueryResultDto query(String soql);
 
     QueryResultDto queryMore(String runId);

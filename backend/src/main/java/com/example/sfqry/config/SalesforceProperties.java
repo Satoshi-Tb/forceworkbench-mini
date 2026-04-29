@@ -8,4 +8,5 @@ public record SalesforceProperties(
         String password,
         String securityToken,
         String loginUrl,
-        String apiVersion) {}
+        String apiVersion,
+        Integer queryBatchSize) {}

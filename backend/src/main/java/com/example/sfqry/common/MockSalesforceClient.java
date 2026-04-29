@@ -1,6 +1,7 @@
 package com.example.sfqry.common;
 
 import com.example.sfqry.auth.SessionContext;
+import com.example.sfqry.auth.UserInfo;
 import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.query.QueryResultDto;
@@ -8,12 +9,14 @@ import com.example.sfqry.query.QueryRunState;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -25,10 +28,37 @@ public class MockSalesforceClient implements SalesforceClient {
 
     private final ObjectMapper objectMapper;
     private final SessionContext sessionContext;
+    private final byte[] expectedEmail;
+    private final byte[] expectedPassword;
 
-    public MockSalesforceClient(ObjectMapper objectMapper, SessionContext sessionContext) {
+    public MockSalesforceClient(
+            ObjectMapper objectMapper,
+            SessionContext sessionContext,
+            @Value("${app.login.email}") String email,
+            @Value("${app.login.password}") String password) {
         this.objectMapper = objectMapper;
         this.sessionContext = sessionContext;
+        this.expectedEmail = email.getBytes(StandardCharsets.UTF_8);
+        this.expectedPassword = password.getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public LoginResult login(String email, String password) {
+        byte[] emailBytes = email.getBytes(StandardCharsets.UTF_8);
+        byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(emailBytes, expectedEmail)
+                || !MessageDigest.isEqual(passwordBytes, expectedPassword)) {
+            throw new ApiException("INVALID_LOGIN", "Invalid credentials", HttpStatus.UNAUTHORIZED);
+        }
+        UserInfo userInfo = new UserInfo(
+                email,
+                "Test User",
+                "00D000000000001",
+                "005000000000001");
+        return new LoginResult(
+                "MOCK_SESSION_" + UUID.randomUUID(),
+                "https://mock.example.salesforce.com",
+                userInfo);
     }
 
     @Override

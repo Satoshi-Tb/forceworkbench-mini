@@ -31,8 +31,12 @@ npm run dev
 cp .env.example .env
 ```
 
-`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしのモック起動。real プロファイル (空または未指定) では `SF_USERNAME` / `SF_PASSWORD` / `SF_SECURITY_TOKEN` / `SF_LOGIN_URL` / `SF_API_VERSION` を設定する。
+`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしのモック起動。real プロファイル (空または未指定) では `SF_USERNAME` / `SF_PASSWORD` / `SF_SECURITY_TOKEN` / `SF_LOGIN_URL` / `SF_API_VERSION` を設定する。`SF_QUERY_BATCH_SIZE` は SOQL query/queryMore の batch size 指定で、空なら Salesforce のデフォルトを使う。
 
-## Salesforce WSC (force-wsc) 入手結論
+SOAP `login()` は Salesforce 側の制約により API v65.0 以上では利用できないため、real プロファイルのログイン確認では `SF_API_VERSION=64.0` を指定する。新規 Developer Edition org では `Setup` の `ユーザインターフェース` で `Enable SOAP API login()` を有効化する必要がある。
 
-`com.force.api:force-wsc:67.0.0` が Maven Central で取得可能。フェーズ 6 の実 SOAP 実装時に `backend/pom.xml` の依存に追加する。
+real プロファイルのログイン画面では Salesforce のユーザー名とパスワードのみを入力する。SOAP Partner API へのログイン時は、サーバ側で `SF_SECURITY_TOKEN` をパスワードに連結して送信する。
+
+## Salesforce WSC / Partner API 入手結論
+
+`com.force.api:force-wsc:67.0.0` (SOAP framework) と `com.force.api:force-partner-api:67.0.0` (Partner WSDL から生成された stub) が Maven Central で取得可能。`backend/pom.xml` で両方を依存に加える。

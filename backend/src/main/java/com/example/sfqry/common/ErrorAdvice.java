@@ -10,8 +10,9 @@ public class ErrorAdvice {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, String>> handleApiException(ApiException e) {
+        String message = e.getMessage() == null ? "" : e.getMessage();
         return ResponseEntity
                 .status(e.getStatus())
-                .body(Map.of("code", e.getCode(), "message", e.getMessage()));
+                .body(Map.of("code", e.getCode(), "message", message));
     }
 }
