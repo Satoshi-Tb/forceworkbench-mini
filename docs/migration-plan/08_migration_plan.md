@@ -5,7 +5,7 @@
 `forceworkbench` (PHP 8.4 製) の **照会系機能だけ** を別言語スタックに移植して、
 「**MySQL Workbench 風の Salesforce 照会ツール**」として再構築する。
 
-- 移植元: `C:\home\dev_ai\forceworkbench\workbench\` (PHP, 生 PHP, Workbench v66.0)
+- 移植元: `forceworkbench\work\reference` (PHP, 生 PHP, Workbench v66.0)
 - 移植目的: 照会機能の充実化。Workbench は Maintenance Only Mode で UI / 体験面の改善が止まっているため、
   自前ツールで「クエリ発行 / 表形式表示 / オブジェクト定義確認」を強化する
 - スコープ:
@@ -91,7 +91,7 @@ MVP では UI 上の API バージョン切替機能は持たせず、`sf.api-ve
 | ログイン処理本体 | `workbench/controllers/LoginController.php#processLogin` | password 比較 → SOAP login → sessionId 取得 → 接続テスト (`getServerTimestamp`) → 監査ログの流れを踏襲 |
 | 接続情報 DTO     | `workbench/context/ConnectionConfiguration.php`          | `sessionId / isSecure / host / apiVersion` を保持。Java 側でも同じ抽象を作る                           |
 | 接続コンテキスト | `workbench/context/WorkbenchContext.php`                 | Spring SessionScope Bean に最小情報のみ持たせる (sessionId, instanceUrl, apiVersion, userInfo)         |
-| WSDL             | `workbench/soapclient/sforce.650.partner.wsdl`           | 現在利用中の v65.0 を初期採用。WSC は同等 WSDL から型生成済                                           |
+| WSDL             | `workbench/soapclient/sforce.650.partner.wsdl`           | 現在利用中の v65.0 を初期採用。WSC は同等 WSDL から型生成済                                            |
 
 ### 2. SOQL Query 機能
 
@@ -154,6 +154,128 @@ backend/
 - `org.springframework.boot:spring-boot-starter-validation`
 - `com.force.api:force-wsc:<latest>` (取得不可なら自前ビルドしてローカルにインストール)
 - `org.springframework.boot:spring-boot-starter-test` (test scope)
+
+## ローカルモックモード
+
+Salesforce 接続情報がない状態でも画面と基本フローを確認できるように、
+Spring Profile による **mock モード** を用意する。
+
+起動例:
+
+```bash
+SPRING_PROFILES_ACTIVE=mock ./mvnw spring-boot:run
+```
+
+または Docker Compose / `.env` では以下で切り替える。
+
+```properties
+SPRING_PROFILES_ACTIVE=mock
+```
+
+### モックモードで確認する範囲
+
+- `/api/login` は固定の email / password で成功させる
+- `/api/me` は固定の UserInfo を返す
+- `/api/describe/global` はサンプルのオブジェクト一覧を返す
+- `/api/describe/{sobject}` はサンプルの項目定義、子リレーション、picklist 等を返す
+- `/api/query` は SOQL の `FROM Account` / `FROM Contact` 等を簡易判定し、対応する CSV を返す
+- `/api/query/runs/{queryRunId}/next` はページング確認用の 2 ページ目 CSV を返す
+- `/api/query/csv` はサンプル CSV をストリーミング返却する
+
+モックモードは UI、ルーティング、DataGrid 表示、ページング、CSV ダウンロード、Docker 起動確認を目的とする。
+Salesforce SOAP login、WSC 接続、実データ権限、実 SOQL エラー、queryLocator の実 TTL は real profile で確認する。
+
+### モック実装方針
+
+Salesforce アクセス部分はインターフェース化し、real / mock を Profile で切り替える。
+
+```java
+public interface SalesforceClient {
+    UserInfoDto getUserInfo();
+    QueryResultDto query(QueryRequestDto request);
+    QueryResultDto queryMore(String queryRunId);
+    StreamingResponseBody exportCsv(QueryRequestDto request);
+    DescribeGlobalDto describeGlobal();
+    DescribeSObjectDto describeSObject(String sobject);
+}
+```
+
+```java
+@Profile("!mock")
+@Service
+public class SoapSalesforceClient implements SalesforceClient {
+    // WSC / Partner SOAP API を呼ぶ
+}
+```
+
+```java
+@Profile("mock")
+@Service
+public class MockSalesforceClient implements SalesforceClient {
+    // resources/mock 配下の JSON / CSV を返す
+}
+```
+
+### モックデータ形式
+
+人がメンテしやすいことを優先し、表形式の query 結果は CSV、階層構造の describe / userInfo は JSON とする。
+
+推奨配置:
+
+```
+backend/src/main/resources/mock/
+├─ me.json
+├─ describe-global.json
+├─ describe/
+│  ├─ Account.json
+│  ├─ Contact.json
+│  └─ Opportunity.json
+└─ query/
+   ├─ account-basic.csv
+   ├─ account-page-1.csv
+   ├─ account-page-2.csv
+   └─ contact-basic.csv
+```
+
+query モックは SOQL を厳密にパースしない。
+MVP では大文字小文字を無視して `FROM Account` / `FROM Contact` などを判定し、対応する CSV を返す。
+
+CSV 例:
+
+```csv
+Id,Name,Type,Industry,CreatedDate
+001000000000001AAA,Acme Corp,Customer,Manufacturing,2025-01-10T09:00:00Z
+001000000000002AAA,Global Media,Prospect,Media,2025-01-11T10:30:00Z
+```
+
+describe JSON 例:
+
+```json
+{
+  "name": "Account",
+  "label": "Account",
+  "fields": [
+    {
+      "name": "Id",
+      "label": "Account ID",
+      "type": "id"
+    },
+    {
+      "name": "Name",
+      "label": "Account Name",
+      "type": "string",
+      "length": 255
+    }
+  ],
+  "childRelationships": [
+    {
+      "relationshipName": "Contacts",
+      "childSObject": "Contact",
+      "field": "AccountId"
+    }
+  ]
+}
+```
 
 ## リポジトリ / Docker 構成案
 
@@ -268,21 +390,21 @@ React 側の API 呼び出しは本番と同じく相対パス `/api/...` に統
 `frontend/vite.config.ts` の例:
 
 ```ts
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
+      "/api": {
+        target: "http://localhost:8080",
         changeOrigin: true,
       },
     },
   },
-})
+});
 ```
 
 この方式では、開発時も React からは同一オリジンの `/api/...` を呼ぶ形になり、
@@ -341,17 +463,17 @@ src/
 
 ## API 設計 (FE ↔ BE)
 
-| メソッド | パス                                      | 用途                                                                                         |
-| -------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| POST     | `/api/login`                              | email/password を受け取り props 比較 → SOAP login。Cookie にセッション ID を発行             |
-| POST     | `/api/logout`                             | サーバセッション破棄                                                                         |
-| GET      | `/api/me`                                 | UserInfo (org/user) 返却。React の起動時の認証状態確認                                       |
-| POST     | `/api/query`                              | `{ soql, queryAll }` を受け取り 1 ページ分の結果と `queryRunId` を返す                       |
-| GET      | `/api/query/runs/{queryRunId}/next`       | サーバ側に保持した queryLocator で queryMore の続きを返す                                    |
-| POST     | `/api/query/csv`                          | `{ soql, queryAll }` を受け取り、text/csv で全件ストリーミング DL                             |
-| GET      | `/api/describe/global`                    | Cache 経由で describeGlobal                                                                  |
-| GET      | `/api/describe/{sobject}`                 | Cache 経由で describeSObject                                                                 |
-| POST     | `/api/cache/clear`                        | キャッシュ手動再読込ボタン用                                                                 |
+| メソッド | パス                                | 用途                                                                             |
+| -------- | ----------------------------------- | -------------------------------------------------------------------------------- |
+| POST     | `/api/login`                        | email/password を受け取り props 比較 → SOAP login。Cookie にセッション ID を発行 |
+| POST     | `/api/logout`                       | サーバセッション破棄                                                             |
+| GET      | `/api/me`                           | UserInfo (org/user) 返却。React の起動時の認証状態確認                           |
+| POST     | `/api/query`                        | `{ soql, queryAll }` を受け取り 1 ページ分の結果と `queryRunId` を返す           |
+| GET      | `/api/query/runs/{queryRunId}/next` | サーバ側に保持した queryLocator で queryMore の続きを返す                        |
+| POST     | `/api/query/csv`                    | `{ soql, queryAll }` を受け取り、text/csv で全件ストリーミング DL                |
+| GET      | `/api/describe/global`              | Cache 経由で describeGlobal                                                      |
+| GET      | `/api/describe/{sobject}`           | Cache 経由で describeSObject                                                     |
+| POST     | `/api/cache/clear`                  | キャッシュ手動再読込ボタン用                                                     |
 
 query paging は Salesforce の `queryLocator` を React に直接返さない。
 Spring Boot の HTTP セッション内で `queryRunId -> queryLocator` を保持し、
@@ -428,7 +550,15 @@ React 側では `fetch` で `POST /api/query/csv` を呼び、レスポンスを
 3. **E2E テスト (任意)**
    - Playwright でログイン → クエリ実行 → 結果検証 → describe 画面遷移までを 1 シナリオ
 
-4. **ローカル起動**
+4. **モックモードでのローカル確認**
+   - `SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしに起動できること
+   - 固定 email / password でログインできること
+   - `SELECT Id, Name FROM Account LIMIT 10` 相当の SOQL で CSV モックデータが DataGrid に表示されること
+   - queryRunId 経由で 2 ページ目モックデータを表示できること
+   - `POST /api/query/csv` でサンプル CSV をダウンロードできること
+   - describe 画面で JSON モックの Account / Contact / Opportunity が表示されること
+
+5. **ローカル起動**
    - `docker compose up` で Spring Boot + Vite を 1 コマンド起動
    - 開発時は Vite dev サーバ (`localhost:5173`) → Spring Boot (`localhost:8080`) に Vite proxy 経由
    - 本番ビルド時は React を `dist/` → Spring Boot の `static/` に配置して同一オリジンで配信
