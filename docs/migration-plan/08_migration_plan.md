@@ -5,7 +5,7 @@
 `forceworkbench` (PHP 8.4 製) の **照会系機能だけ** を別言語スタックに移植して、
 「**MySQL Workbench 風の Salesforce 照会ツール**」として再構築する。
 
-- 移植元: `forceworkbench\work\reference` (PHP, 生 PHP, Workbench v66.0)
+- 移植元: `forceworkbench-mini\work\reference` (PHP, 生 PHP, Workbench v66.0)
 - 移植目的: 照会機能の充実化。Workbench は Maintenance Only Mode で UI / 体験面の改善が止まっているため、
   自前ツールで「クエリ発行 / 表形式表示 / オブジェクト定義確認」を強化する
 - スコープ:
