@@ -1,2 +1,6 @@
 /work/
 /.codex
+
+.claude
+.playwright-mcp/
+.mcp.json
