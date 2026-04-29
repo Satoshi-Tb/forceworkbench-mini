@@ -4,3 +4,15 @@
 .claude
 .playwright-mcp/
 .mcp.json
+
+# build outputs
+backend/target/
+frontend/node_modules/
+frontend/dist/
+
+# generated
+frontend/src/routeTree.gen.ts
+
+# secrets / local overrides
+**/application-local.properties
+.env
