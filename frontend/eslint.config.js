@@ -19,8 +19,24 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExports: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            "rootRoute",
+            "indexRoute",
+            "loginRoute",
+            "queryRoute",
+            "describeRoute",
+            "describeSObjectRoute",
+          ],
+        },
       ],
+    },
+  },
+  {
+    files: ["src/routes/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   },
 );

@@ -1,100 +1,44 @@
-import { StrictMode, useEffect, useState, type FormEvent } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { login, logout, me, type UserInfo } from "./api/auth";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { rootRoute } from "./routes/__root";
+import { indexRoute } from "./routes";
+import { loginRoute } from "./routes/login";
+import { queryRoute } from "./routes/query";
+import { describeRoute } from "./routes/describe";
+import { describeSObjectRoute } from "./routes/describe/$sobject";
+import { theme } from "./theme";
 
-function LoginForm({ onSuccess }: { onSuccess: (u: UserInfo) => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const queryClient = new QueryClient();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const user = await login(email, password);
-      onSuccess(user);
-    } catch {
-      setError("ログインに失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  };
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  loginRoute,
+  queryRoute,
+  describeRoute,
+  describeSObjectRoute,
+]);
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <h1>ログイン</h1>
-      <div>
-        <label>
-          Email:{" "}
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Password:{" "}
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
-      </div>
-      <button type="submit" disabled={loading}>
-        ログイン
-      </button>
-      {error && <div style={{ color: "red" }}>{error}</div>}
-    </form>
-  );
-}
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+});
 
-function Home({
-  user,
-  onLogout,
-}: {
-  user: UserInfo;
-  onLogout: () => void;
-}) {
-  return (
-    <div>
-      <h1>ようこそ</h1>
-      <p>Email: {user.email}</p>
-      <p>Name: {user.name}</p>
-      <button onClick={onLogout}>ログアウト</button>
-    </div>
-  );
-}
-
-function App() {
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    me().then((u) => {
-      setUser(u);
-      setChecking(false);
-    });
-  }, []);
-
-  const handleLogout = async () => {
-    await logout();
-    setUser(null);
-  };
-
-  if (checking) return <div>確認中...</div>;
-  if (user) return <Home user={user} onLogout={handleLogout} />;
-  return <LoginForm onSuccess={setUser} />;
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );

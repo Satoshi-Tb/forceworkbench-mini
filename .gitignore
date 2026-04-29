@@ -9,6 +9,7 @@
 backend/target/
 frontend/node_modules/
 frontend/dist/
+frontend/*.tsbuildinfo
 
 # generated
 frontend/src/routeTree.gen.ts

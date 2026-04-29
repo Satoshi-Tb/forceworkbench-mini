@@ -1,0 +1,15 @@
+{
+  "name": "Account",
+  "label": "Account",
+  "fields": [
+    { "name": "Id", "label": "Account ID", "type": "id" },
+    { "name": "Name", "label": "Account Name", "type": "string" },
+    { "name": "Type", "label": "Type", "type": "picklist" },
+    { "name": "Industry", "label": "Industry", "type": "picklist" },
+    { "name": "CreatedDate", "label": "Created Date", "type": "datetime" }
+  ],
+  "childRelationships": [
+    { "childSObject": "Contact", "field": "AccountId", "relationshipName": "Contacts" },
+    { "childSObject": "Opportunity", "field": "AccountId", "relationshipName": "Opportunities" }
+  ]
+}

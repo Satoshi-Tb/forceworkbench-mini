@@ -1,0 +1,7 @@
+{
+  "sobjects": [
+    { "name": "Account", "label": "Account" },
+    { "name": "Contact", "label": "Contact" },
+    { "name": "Opportunity", "label": "Opportunity" }
+  ]
+}

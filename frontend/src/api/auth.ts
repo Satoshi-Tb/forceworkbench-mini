@@ -3,6 +3,8 @@ import { apiFetch } from "./client";
 export type UserInfo = {
   email: string;
   name: string;
+  organizationId: string;
+  userId: string;
 };
 
 export async function login(

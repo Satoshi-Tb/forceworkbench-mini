@@ -16,12 +16,15 @@ public class AppLoginController {
 
     private final byte[] expectedEmail;
     private final byte[] expectedPassword;
+    private final SessionContext sessionContext;
 
     public AppLoginController(
             @Value("${app.login.email}") String email,
-            @Value("${app.login.password}") String password) {
+            @Value("${app.login.password}") String password,
+            SessionContext sessionContext) {
         this.expectedEmail = email.getBytes(StandardCharsets.UTF_8);
         this.expectedPassword = password.getBytes(StandardCharsets.UTF_8);
+        this.sessionContext = sessionContext;
     }
 
     @PostMapping("/login")
@@ -36,8 +39,14 @@ public class AppLoginController {
         if (!emailOk || !passwordOk) {
             return ResponseEntity.status(401).build();
         }
-        UserInfo userInfo = new UserInfo(req.email(), "Test User");
-        session.setAttribute("userInfo", userInfo);
+        UserInfo userInfo = new UserInfo(
+                req.email(),
+                "Test User",
+                "00D000000000001",
+                "005000000000001");
+        sessionContext.setSessionId(session.getId());
+        sessionContext.setInstanceUrl("https://mock.example.salesforce.com");
+        sessionContext.setUserInfo(userInfo);
         return ResponseEntity.ok(userInfo);
     }
 }

@@ -1,0 +1,12 @@
+{
+  "name": "Opportunity",
+  "label": "Opportunity",
+  "fields": [
+    { "name": "Id", "label": "Opportunity ID", "type": "id" },
+    { "name": "Name", "label": "Opportunity Name", "type": "string" },
+    { "name": "StageName", "label": "Stage", "type": "picklist" },
+    { "name": "Amount", "label": "Amount", "type": "currency" },
+    { "name": "AccountId", "label": "Account ID", "type": "reference" }
+  ],
+  "childRelationships": []
+}

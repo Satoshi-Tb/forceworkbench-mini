@@ -1,0 +1,12 @@
+{
+  "name": "Contact",
+  "label": "Contact",
+  "fields": [
+    { "name": "Id", "label": "Contact ID", "type": "id" },
+    { "name": "FirstName", "label": "First Name", "type": "string" },
+    { "name": "LastName", "label": "Last Name", "type": "string" },
+    { "name": "Email", "label": "Email", "type": "email" },
+    { "name": "AccountId", "label": "Account ID", "type": "reference" }
+  ],
+  "childRelationships": []
+}
