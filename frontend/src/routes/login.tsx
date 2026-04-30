@@ -20,8 +20,8 @@ export const loginRoute = createRoute({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("test@example.com");
-  const [password, setPassword] = useState("test");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
