@@ -1,4 +1,11 @@
-import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { createRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ApiError } from "../api/client";
@@ -25,7 +32,7 @@ function QueryPage() {
       const next = await runSoql.mutateAsync(soql);
       setResult(next);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Query failed");
+      setError(e instanceof ApiError ? e.message : "SOQL実行に失敗しました");
     }
   };
 
@@ -35,7 +42,9 @@ function QueryPage() {
     try {
       setResult(await nextQueryPage(result.queryRunId));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Next page failed");
+      setError(
+        e instanceof ApiError ? e.message : "次のページの取得に失敗しました",
+      );
     }
   };
 
@@ -50,14 +59,16 @@ function QueryPage() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "CSV download failed");
+      setError(
+        e instanceof ApiError ? e.message : "CSVダウンロードに失敗しました",
+      );
     }
   };
 
   return (
     <Stack spacing={2}>
       <Typography variant="h5" component="h1">
-        SOQL Query
+        SOQL
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       <TextField
@@ -74,10 +85,14 @@ function QueryPage() {
           onClick={handleRun}
           disabled={runSoql.isPending}
         >
-          Run
+          実行
         </Button>
-        <Button variant="outlined" onClick={handleNext} disabled={result?.done ?? true}>
-          Next Page
+        <Button
+          variant="outlined"
+          onClick={handleNext}
+          disabled={result?.done ?? true}
+        >
+          次のページ
         </Button>
         <Button variant="outlined" onClick={handleCsv}>
           CSV

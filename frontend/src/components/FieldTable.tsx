@@ -3,17 +3,17 @@ import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import type { DescribeSObject } from "../api/describe";
 
 const fieldColumns: GridColDef[] = [
-  { field: "name", headerName: "Name", flex: 1, minWidth: 160 },
-  { field: "label", headerName: "Label", flex: 1, minWidth: 160 },
-  { field: "type", headerName: "Type", flex: 1, minWidth: 120 },
+  { field: "name", headerName: "名前", flex: 1, minWidth: 160 },
+  { field: "label", headerName: "ラベル", flex: 1, minWidth: 160 },
+  { field: "type", headerName: "型", flex: 1, minWidth: 120 },
 ];
 
 const childColumns: GridColDef[] = [
-  { field: "childSObject", headerName: "Child Object", flex: 1, minWidth: 160 },
-  { field: "field", headerName: "Field", flex: 1, minWidth: 160 },
+  { field: "childSObject", headerName: "子オブジェクト", flex: 1, minWidth: 160 },
+  { field: "field", headerName: "項目", flex: 1, minWidth: 160 },
   {
     field: "relationshipName",
-    headerName: "Relationship",
+    headerName: "リレーション名",
     flex: 1,
     minWidth: 160,
   },
@@ -37,11 +37,11 @@ export function FieldTable({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h6">Fields</Typography>
+      <Typography variant="h6">項目</Typography>
       <Box sx={{ height: 420 }}>
         <DataGrid rows={fields} columns={fieldColumns} disableRowSelectionOnClick />
       </Box>
-      <Typography variant="h6">Child Relationships</Typography>
+      <Typography variant="h6">子リレーション</Typography>
       <Box sx={{ height: 320 }}>
         <DataGrid rows={children} columns={childColumns} disableRowSelectionOnClick />
       </Box>

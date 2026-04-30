@@ -44,11 +44,11 @@ function LoginPage() {
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Stack component="form" spacing={2} onSubmit={handleSubmit}>
           <Typography variant="h5" component="h1">
-            Login
+            ログイン
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label="Email"
+            label="メールアドレス"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -56,7 +56,7 @@ function LoginPage() {
             fullWidth
           />
           <TextField
-            label="Password"
+            label="パスワード"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -64,7 +64,7 @@ function LoginPage() {
             fullWidth
           />
           <Button type="submit" variant="contained" disabled={loading}>
-            Login
+            ログイン
           </Button>
         </Stack>
       </Paper>

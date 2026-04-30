@@ -16,7 +16,7 @@ function DescribePage() {
   return (
     <Stack spacing={2}>
       <Typography variant="h5" component="h1">
-        Describe
+        オブジェクト詳細
       </Typography>
       <ObjectPicker objects={data?.sobjects ?? []} loading={isLoading} />
     </Stack>
