@@ -4,6 +4,11 @@ import org.springframework.http.HttpStatus;
 
 public class ApiException extends RuntimeException {
 
+    public static final String MALFORMED_QUERY = "MALFORMED_QUERY";
+    public static final String INVALID_FIELD = "INVALID_FIELD";
+    public static final String INVALID_SESSION_ID = "INVALID_SESSION_ID";
+    public static final String QUERY_TIMEOUT = "QUERY_TIMEOUT";
+
     private final String code;
     private final HttpStatus status;
 

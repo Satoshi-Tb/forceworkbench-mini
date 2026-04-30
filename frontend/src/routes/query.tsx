@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { createRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { ApiError } from "../api/client";
 import { downloadCsv, nextQueryPage, type QueryResult } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
 import { useRunSoql } from "../hooks/useRunSoql";
@@ -23,8 +24,8 @@ function QueryPage() {
     try {
       const next = await runSoql.mutateAsync(soql);
       setResult(next);
-    } catch {
-      setError("Query failed");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Query failed");
     }
   };
 
@@ -33,8 +34,8 @@ function QueryPage() {
     setError(null);
     try {
       setResult(await nextQueryPage(result.queryRunId));
-    } catch {
-      setError("Next page failed");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Next page failed");
     }
   };
 
@@ -48,8 +49,8 @@ function QueryPage() {
       anchor.download = "query.csv";
       anchor.click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError("CSV download failed");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "CSV download failed");
     }
   };
 

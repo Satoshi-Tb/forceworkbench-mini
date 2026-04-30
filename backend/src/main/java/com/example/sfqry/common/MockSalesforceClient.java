@@ -74,7 +74,7 @@ public class MockSalesforceClient implements SalesforceClient {
                     new QueryRunState("mock/query/account-page-2.csv", false));
             return result(runId, "mock/query/account-page-1.csv", false);
         }
-        throw new ApiException("MALFORMED_QUERY", "Unsupported mock SOQL", HttpStatus.BAD_REQUEST);
+        throw new ApiException(ApiException.MALFORMED_QUERY, "Unsupported mock SOQL", HttpStatus.BAD_REQUEST);
     }
 
     @Override

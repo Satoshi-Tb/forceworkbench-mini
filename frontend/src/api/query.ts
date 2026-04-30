@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, ensureOk } from "./client";
 
 export type QueryResult = {
   queryRunId: string | null;
@@ -12,17 +12,13 @@ export async function runQuery(soql: string): Promise<QueryResult> {
     method: "POST",
     body: JSON.stringify({ soql }),
   });
-  if (!res.ok) {
-    throw new Error(`query failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }
 
 export async function nextQueryPage(runId: string): Promise<QueryResult> {
   const res = await apiFetch(`/api/query/runs/${runId}/next`);
-  if (!res.ok) {
-    throw new Error(`query next failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }
 
@@ -31,8 +27,6 @@ export async function downloadCsv(soql: string): Promise<Blob> {
     method: "POST",
     body: JSON.stringify({ soql }),
   });
-  if (!res.ok) {
-    throw new Error(`csv failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.blob();
 }

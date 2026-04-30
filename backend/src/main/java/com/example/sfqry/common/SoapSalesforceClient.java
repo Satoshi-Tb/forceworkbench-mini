@@ -196,7 +196,7 @@ public class SoapSalesforceClient implements SalesforceClient {
 
     private PartnerConnection connection() throws ConnectionException {
         if (sessionContext.getSessionId() == null) {
-            throw new ApiException("INVALID_SESSION_ID", "Not logged in", HttpStatus.UNAUTHORIZED);
+            throw new ApiException(ApiException.INVALID_SESSION_ID, "Not logged in", HttpStatus.UNAUTHORIZED);
         }
         return connectionFactory.createForSession(
                 sessionContext.getSessionId(),
@@ -264,7 +264,7 @@ public class SoapSalesforceClient implements SalesforceClient {
             String code = fault.getExceptionCode() != null
                     ? fault.getExceptionCode().name()
                     : "API_ERROR";
-            HttpStatus status = "INVALID_SESSION_ID".equals(code)
+            HttpStatus status = ApiException.INVALID_SESSION_ID.equals(code)
                     ? HttpStatus.UNAUTHORIZED
                     : HttpStatus.BAD_REQUEST;
             return new ApiException(code, fault.getExceptionMessage(), status);

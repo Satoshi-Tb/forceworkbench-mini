@@ -2,6 +2,8 @@ package com.example.sfqry.auth;
 
 import com.example.sfqry.common.LoginResult;
 import com.example.sfqry.common.SalesforceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class AppLoginController {
+
+    private static final Logger audit = LoggerFactory.getLogger("audit");
 
     private final SalesforceClient salesforceClient;
     private final SessionContext sessionContext;
@@ -29,6 +33,7 @@ public class AppLoginController {
         sessionContext.setSessionId(result.sessionId());
         sessionContext.setInstanceUrl(result.instanceUrl());
         sessionContext.setUserInfo(result.userInfo());
+        audit.info("LOGIN user={}", result.userInfo().email());
         return ResponseEntity.ok(result.userInfo());
     }
 }

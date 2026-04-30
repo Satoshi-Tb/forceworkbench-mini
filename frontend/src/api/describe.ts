@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, ensureOk } from "./client";
 
 export type SObjectSummary = {
   name: string;
@@ -30,9 +30,7 @@ export type DescribeSObject = {
 
 export async function describeGlobal(): Promise<DescribeGlobal> {
   const res = await apiFetch("/api/describe/global");
-  if (!res.ok) {
-    throw new Error(`describe global failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }
 
@@ -40,8 +38,6 @@ export async function describeSObject(
   sobject: string,
 ): Promise<DescribeSObject> {
   const res = await apiFetch(`/api/describe/${sobject}`);
-  if (!res.ok) {
-    throw new Error(`describe sobject failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }

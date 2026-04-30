@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, ensureOk } from "./client";
 
 export type UserInfo = {
   email: string;
@@ -15,24 +15,18 @@ export async function login(
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) {
-    throw new Error(`login failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }
 
 export async function logout(): Promise<void> {
   const res = await apiFetch("/api/logout", { method: "POST" });
-  if (!res.ok) {
-    throw new Error(`logout failed: ${res.status}`);
-  }
+  await ensureOk(res);
 }
 
 export async function me(): Promise<UserInfo | null> {
   const res = await apiFetch("/api/me");
   if (res.status === 401) return null;
-  if (!res.ok) {
-    throw new Error(`me failed: ${res.status}`);
-  }
+  await ensureOk(res);
   return res.json();
 }

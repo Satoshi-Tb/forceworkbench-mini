@@ -1,3 +1,14 @@
+export class ApiError extends Error {
+  readonly code: string;
+  readonly status: number;
+
+  constructor(code: string, message: string, status: number) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
 export async function apiFetch(
   input: string,
   init?: RequestInit,
@@ -28,6 +39,20 @@ export async function apiFetch(
     window.location.assign("/login");
   }
   return response;
+}
+
+export async function ensureOk(res: Response): Promise<Response> {
+  if (res.ok) return res;
+  let code = "UNKNOWN";
+  let message = `request failed: ${res.status}`;
+  try {
+    const body = await res.clone().json();
+    if (typeof body?.code === "string") code = body.code;
+    if (typeof body?.message === "string") message = body.message;
+  } catch {
+    // 非 JSON レスポンス → 既定値のまま
+  }
+  throw new ApiError(code, message, res.status);
 }
 
 function getCookie(name: string): string | null {

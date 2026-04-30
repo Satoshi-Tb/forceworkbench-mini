@@ -1,26 +1,42 @@
 package com.example.sfqry.query;
 
+import com.example.sfqry.auth.SessionContext;
 import com.example.sfqry.common.SalesforceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class QueryService {
 
-    private final SalesforceClient salesforceClient;
+    private static final Logger audit = LoggerFactory.getLogger("audit");
 
-    public QueryService(SalesforceClient salesforceClient) {
+    private final SalesforceClient salesforceClient;
+    private final SessionContext sessionContext;
+
+    public QueryService(SalesforceClient salesforceClient, SessionContext sessionContext) {
         this.salesforceClient = salesforceClient;
+        this.sessionContext = sessionContext;
     }
 
     public QueryResultDto query(String soql) {
+        audit.info("QUERY user={} soql={}", currentEmail(), soql);
         return salesforceClient.query(soql);
     }
 
     public QueryResultDto queryMore(String runId) {
+        audit.info("QUERY_MORE user={} runId={}", currentEmail(), runId);
         return salesforceClient.queryMore(runId);
     }
 
     public String exportCsv(String soql) {
+        audit.info("CSV user={} soql={}", currentEmail(), soql);
         return salesforceClient.exportCsv(soql);
+    }
+
+    private String currentEmail() {
+        return sessionContext.getUserInfo() == null
+                ? "anonymous"
+                : sessionContext.getUserInfo().email();
     }
 }
