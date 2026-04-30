@@ -1,7 +1,5 @@
-import { Stack, Typography } from "@mui/material";
 import { createRoute } from "@tanstack/react-router";
-import { ObjectPicker } from "../../components/ObjectPicker";
-import { useDescribeGlobal } from "../../hooks/useDescribeGlobal";
+import { DescribeWorkspace } from "../../components/DescribeWorkspace";
 import { rootRoute } from "../__root";
 
 export const describeRoute = createRoute({
@@ -11,14 +9,5 @@ export const describeRoute = createRoute({
 });
 
 function DescribePage() {
-  const { data, isLoading } = useDescribeGlobal();
-
-  return (
-    <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        オブジェクト詳細
-      </Typography>
-      <ObjectPicker objects={data?.sobjects ?? []} loading={isLoading} />
-    </Stack>
-  );
+  return <DescribeWorkspace />;
 }
