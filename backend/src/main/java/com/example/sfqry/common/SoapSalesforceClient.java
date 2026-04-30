@@ -26,6 +26,7 @@ import com.sforce.ws.bind.XmlObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -166,7 +167,7 @@ public class SoapSalesforceClient implements SalesforceClient {
             DescribeGlobalResult dgr = conn.describeGlobal();
             List<DescribeGlobalDto.SObjectSummaryDto> sobjects = new ArrayList<>();
             for (DescribeGlobalSObjectResult s : dgr.getSobjects()) {
-                sobjects.add(new DescribeGlobalDto.SObjectSummaryDto(s.getName(), s.getLabel()));
+                sobjects.add(new DescribeGlobalDto.SObjectSummaryDto(s.getName(), s.getLabel(), s.isCustom()));
             }
             return new DescribeGlobalDto(sobjects);
         } catch (ConnectionException e) {
@@ -181,17 +182,69 @@ public class SoapSalesforceClient implements SalesforceClient {
             DescribeSObjectResult dsr = conn.describeSObject(sobject);
             List<FieldDto> fields = new ArrayList<>();
             for (Field f : dsr.getFields()) {
-                fields.add(new FieldDto(f.getName(), f.getLabel(), f.getType().toString()));
+                fields.add(toFieldDto(f));
             }
             List<ChildRelationshipDto> children = new ArrayList<>();
             for (ChildRelationship c : dsr.getChildRelationships()) {
                 children.add(new ChildRelationshipDto(
                         c.getChildSObject(), c.getField(), c.getRelationshipName()));
             }
-            return new DescribeSObjectDto(dsr.getName(), dsr.getLabel(), fields, children);
+            return new DescribeSObjectDto(
+                    dsr.getName(),
+                    dsr.getLabel(),
+                    dsr.isCustom(),
+                    dsr.isSearchable(),
+                    dsr.isLayoutable(),
+                    dsr.isRetrieveable(),
+                    dsr.isCreateable(),
+                    dsr.isUpdateable(),
+                    dsr.isDeletable(),
+                    dsr.isMergeable(),
+                    dsr.isQueryable(),
+                    dsr.isTriggerable(),
+                    dsr.getKeyPrefix(),
+                    fields,
+                    children);
         } catch (ConnectionException e) {
             throw mapException(e);
         }
+    }
+
+    private FieldDto toFieldDto(Field f) {
+        return new FieldDto(
+                f.getName(),
+                f.getLabel(),
+                f.getType() == null ? "" : f.getType().toString(),
+                f.getReferenceTo() == null ? List.of() : Arrays.asList(f.getReferenceTo()),
+                f.getRelationshipName(),
+                f.getSoapType() == null ? "" : f.getSoapType().toString(),
+                f.getLength(),
+                f.getByteLength(),
+                f.getDigits(),
+                f.getPrecision(),
+                f.getScale(),
+                f.isNillable(),
+                f.isCreateable(),
+                f.isUpdateable(),
+                f.isDefaultedOnCreate(),
+                f.isCalculated(),
+                f.isAutoNumber(),
+                f.isAiPredictionField(),
+                f.isAggregatable(),
+                f.isGroupable(),
+                f.isFilterable(),
+                f.isSortable(),
+                f.isCaseSensitive(),
+                f.isSearchPrefilterable(),
+                f.isIdLookup(),
+                f.isNameField(),
+                f.isNamePointing(),
+                f.isPolymorphicForeignKey(),
+                f.isCustom(),
+                f.isDeprecatedAndHidden(),
+                f.isRestrictedPicklist(),
+                f.isPermissionable(),
+                f.isUnique());
     }
 
     private PartnerConnection connection() throws ConnectionException {

@@ -1,7 +1,8 @@
 {
   "sobjects": [
-    { "name": "Account", "label": "Account" },
-    { "name": "Contact", "label": "Contact" },
-    { "name": "Opportunity", "label": "Opportunity" }
+    { "name": "Account", "label": "Account", "custom": false },
+    { "name": "Contact", "label": "Contact", "custom": false },
+    { "name": "Opportunity", "label": "Opportunity", "custom": false },
+    { "name": "Invoice__c", "label": "Invoice", "custom": true }
   ]
 }
