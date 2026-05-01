@@ -1,3 +1,41 @@
 package com.example.sfqry.describe.dto;
 
-public record FieldDto(String name, String label, String type) {}
+import java.util.List;
+
+public record FieldDto(
+        String name,
+        String label,
+        String type,
+        List<String> referenceTo,
+        String relationshipName,
+        String soapType,
+        int length,
+        int byteLength,
+        int digits,
+        int precision,
+        int scale,
+        boolean nillable,
+        boolean createable,
+        boolean updateable,
+        boolean defaultedOnCreate,
+        boolean calculated,
+        boolean autoNumber,
+        boolean aiPredictionField,
+        boolean aggregatable,
+        boolean groupable,
+        boolean filterable,
+        boolean sortable,
+        boolean caseSensitive,
+        boolean searchPrefilterable,
+        boolean idLookup,
+        boolean nameField,
+        boolean namePointing,
+        boolean polymorphicForeignKey,
+        boolean custom,
+        boolean deprecatedAndHidden,
+        boolean restrictedPicklist,
+        boolean permissionable,
+        boolean unique,
+        List<PicklistValueDto> picklistValues) {
+    public record PicklistValueDto(String value, String label, boolean active, boolean defaultValue) {}
+}

@@ -47,17 +47,17 @@ function RootLayout() {
             Force Workbench Mini
           </Typography>
           <Button component={Link} to="/query" color="inherit">
-            SOQL
+            クエリ
           </Button>
           <Button component={Link} to="/describe" color="inherit">
-            オブジェクト詳細
+            参照情報
           </Button>
           <Button onClick={handleLogout} color="inherit">
             ログアウト
           </Button>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth={false} sx={{ maxWidth: 1680, mx: "auto", px: 4, py: 3 }}>
         <Outlet />
       </Container>
     </Box>
