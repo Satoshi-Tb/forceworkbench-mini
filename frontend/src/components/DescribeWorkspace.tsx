@@ -11,7 +11,12 @@ import {
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useEffect, useMemo, useState } from "react";
-import type { DescribeSObject, Field, SObjectSummary } from "../api/describe";
+import type {
+  ChildRelationship,
+  DescribeSObject,
+  Field,
+  SObjectSummary,
+} from "../api/describe";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
 import { useDescribeSObject } from "../hooks/useDescribeSObject";
 import { ObjectPicker } from "./ObjectPicker";
@@ -126,12 +131,52 @@ function ObjectDetailPanel({
           describe && <FieldsTab describe={describe} />
         )}
         {!loading && tab === "relationships" && (
-          <Typography color="text.secondary">
-            リレーションタブは次の実装ステップで更新します。
-          </Typography>
+          describe && <RelationshipsTab describe={describe} />
         )}
       </Box>
     </Paper>
+  );
+}
+
+type ChildRelationshipRow = ChildRelationship & {
+  id: string;
+};
+
+const childRelationshipColumns: GridColDef<ChildRelationshipRow>[] = [
+  { field: "childSObject", headerName: "子オブジェクト", flex: 1, minWidth: 180 },
+  { field: "field", headerName: "項目", flex: 1, minWidth: 180 },
+  {
+    field: "relationshipName",
+    headerName: "リレーション名",
+    flex: 1,
+    minWidth: 180,
+  },
+];
+
+function RelationshipsTab({ describe }: { describe: DescribeSObject }) {
+  const rows = useMemo<ChildRelationshipRow[]>(
+    () =>
+      describe.childRelationships.map((relationship, index) => ({
+        ...relationship,
+        id: `${relationship.childSObject}-${relationship.field}-${index}`,
+      })),
+    [describe.childRelationships],
+  );
+
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="h6">子リレーション</Typography>
+      <Box sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}>
+        <DataGrid
+          rows={rows}
+          columns={childRelationshipColumns}
+          hideFooter
+          disableColumnMenu
+          disableRowSelectionOnClick
+          sx={{ borderColor: "divider" }}
+        />
+      </Box>
+    </Stack>
   );
 }
 
