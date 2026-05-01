@@ -35,4 +35,7 @@ public record FieldDto(
         boolean deprecatedAndHidden,
         boolean restrictedPicklist,
         boolean permissionable,
-        boolean unique) {}
+        boolean unique,
+        List<PicklistValueDto> picklistValues) {
+    public record PicklistValueDto(String value, String label, boolean active, boolean defaultValue) {}
+}

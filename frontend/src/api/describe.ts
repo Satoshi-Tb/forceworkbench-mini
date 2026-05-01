@@ -44,6 +44,14 @@ export type Field = {
   restrictedPicklist: boolean;
   permissionable: boolean;
   unique: boolean;
+  picklistValues: PicklistValue[];
+};
+
+export type PicklistValue = {
+  value: string;
+  label: string;
+  active: boolean;
+  defaultValue: boolean;
 };
 
 export type ChildRelationship = {

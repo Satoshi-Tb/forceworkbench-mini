@@ -46,7 +46,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": false,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "LastName",
@@ -81,13 +82,16 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "AccountId",
       "label": "Account ID",
       "type": "reference",
-      "referenceTo": ["Account"],
+      "referenceTo": [
+        "Account"
+      ],
       "relationshipName": "Account",
       "soapType": "tns:ID",
       "length": 18,
@@ -116,7 +120,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     }
   ],
   "childRelationships": []

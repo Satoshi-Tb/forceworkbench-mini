@@ -17,6 +17,7 @@ import com.sforce.soap.partner.DescribeSObjectResult;
 import com.sforce.soap.partner.Field;
 import com.sforce.soap.partner.GetUserInfoResult;
 import com.sforce.soap.partner.PartnerConnection;
+import com.sforce.soap.partner.PicklistEntry;
 import com.sforce.soap.partner.QueryResult;
 import com.sforce.soap.partner.fault.ApiFault;
 import com.sforce.soap.partner.fault.LoginFault;
@@ -244,7 +245,23 @@ public class SoapSalesforceClient implements SalesforceClient {
                 f.isDeprecatedAndHidden(),
                 f.isRestrictedPicklist(),
                 f.isPermissionable(),
-                f.isUnique());
+                f.isUnique(),
+                toPicklistValueDtos(f.getPicklistValues()));
+    }
+
+    private List<FieldDto.PicklistValueDto> toPicklistValueDtos(PicklistEntry[] entries) {
+        if (entries == null || entries.length == 0) {
+            return List.of();
+        }
+        List<FieldDto.PicklistValueDto> values = new ArrayList<>();
+        for (PicklistEntry entry : entries) {
+            values.add(new FieldDto.PicklistValueDto(
+                    entry.getValue(),
+                    entry.getLabel(),
+                    entry.isActive(),
+                    entry.isDefaultValue()));
+        }
+        return values;
     }
 
     private PartnerConnection connection() throws ConnectionException {

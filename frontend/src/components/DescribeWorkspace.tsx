@@ -15,6 +15,7 @@ import type {
   ChildRelationship,
   DescribeSObject,
   Field,
+  PicklistValue,
   SObjectSummary,
 } from "../api/describe";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
@@ -251,13 +252,44 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
           }}
         >
           {selectedField ? (
-            <FieldDetail field={selectedField} />
+            <FieldDetailPanel field={selectedField} />
           ) : (
             <Typography color="text.secondary">項目を選択してください。</Typography>
           )}
         </Paper>
       </Box>
     </Box>
+  );
+}
+
+function FieldDetailPanel({ field }: { field: FieldRow }) {
+  const [tab, setTab] = useState("detail");
+  const hasPicklistValues =
+    (field.type === "picklist" || field.type === "multipicklist") &&
+    field.picklistValues.length > 0;
+
+  useEffect(() => {
+    setTab("detail");
+  }, [field.name]);
+
+  return (
+    <Stack spacing={1.5} sx={{ height: "100%" }}>
+      <Tabs
+        value={tab}
+        onChange={(_, value: string) => setTab(value)}
+        sx={{ minHeight: 40 }}
+      >
+        <Tab value="detail" label="項目詳細" sx={{ minHeight: 40 }} />
+        {hasPicklistValues && (
+          <Tab value="picklist" label="選択リスト" sx={{ minHeight: 40 }} />
+        )}
+      </Tabs>
+      <Divider />
+      {tab === "detail" && <FieldDetail field={field} />}
+      {tab === "picklist" && hasPicklistValues && (
+        <PicklistValuesTable values={field.picklistValues} />
+      )}
+    </Stack>
   );
 }
 
@@ -302,15 +334,14 @@ function FieldDetail({ field }: { field: FieldRow }) {
   ];
 
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="h6">項目詳細</Typography>
+    <Box sx={{ minHeight: 0 }}>
       <Box
         component="dl"
         sx={{
           display: "grid",
           gridTemplateColumns: "minmax(150px, 190px) 1fr",
           m: 0,
-          maxHeight: "calc(100vh - 395px)",
+          maxHeight: "calc(100vh - 430px)",
           overflowY: "auto",
           rowGap: 1,
         }}
@@ -326,7 +357,46 @@ function FieldDetail({ field }: { field: FieldRow }) {
           </Box>
         ))}
       </Box>
-    </Stack>
+    </Box>
+  );
+}
+
+type PicklistValueRow = PicklistValue & {
+  id: string;
+  activeText: string;
+  defaultText: string;
+};
+
+const picklistValueColumns: GridColDef<PicklistValueRow>[] = [
+  { field: "value", headerName: "値", flex: 1, minWidth: 160 },
+  { field: "label", headerName: "ラベル", flex: 1, minWidth: 160 },
+  { field: "activeText", headerName: "有効", width: 90 },
+  { field: "defaultText", headerName: "デフォルト", width: 120 },
+];
+
+function PicklistValuesTable({ values }: { values: PicklistValue[] }) {
+  const rows = useMemo<PicklistValueRow[]>(
+    () =>
+      values.map((value, index) => ({
+        ...value,
+        id: `${value.value}-${index}`,
+        activeText: formatBoolean(value.active),
+        defaultText: formatBoolean(value.defaultValue),
+      })),
+    [values],
+  );
+
+  return (
+    <Box sx={{ height: "calc(100vh - 430px)", minHeight: 500, width: "100%" }}>
+      <DataGrid
+        rows={rows}
+        columns={picklistValueColumns}
+        hideFooter
+        disableColumnMenu
+        disableRowSelectionOnClick
+        sx={{ borderColor: "divider" }}
+      />
+    </Box>
   );
 }
 

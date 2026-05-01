@@ -46,7 +46,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": false,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "Name",
@@ -81,13 +82,17 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "OwnerId",
       "label": "Owner ID",
       "type": "reference",
-      "referenceTo": ["User", "Group"],
+      "referenceTo": [
+        "User",
+        "Group"
+      ],
       "relationshipName": "Owner",
       "soapType": "tns:ID",
       "length": 18,
@@ -116,7 +121,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "Type",
@@ -151,7 +157,33 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": [
+        {
+          "value": "Prospect",
+          "label": "Prospect",
+          "active": true,
+          "defaultValue": false
+        },
+        {
+          "value": "Customer",
+          "label": "Customer",
+          "active": true,
+          "defaultValue": true
+        },
+        {
+          "value": "Partner",
+          "label": "Partner",
+          "active": true,
+          "defaultValue": false
+        },
+        {
+          "value": "Deprecated",
+          "label": "Deprecated",
+          "active": false,
+          "defaultValue": false
+        }
+      ]
     },
     {
       "name": "CreatedDate",
@@ -186,11 +218,20 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": false,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     }
   ],
   "childRelationships": [
-    { "childSObject": "Contact", "field": "AccountId", "relationshipName": "Contacts" },
-    { "childSObject": "Opportunity", "field": "AccountId", "relationshipName": "Opportunities" }
+    {
+      "childSObject": "Contact",
+      "field": "AccountId",
+      "relationshipName": "Contacts"
+    },
+    {
+      "childSObject": "Opportunity",
+      "field": "AccountId",
+      "relationshipName": "Opportunities"
+    }
   ]
 }

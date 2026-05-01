@@ -46,7 +46,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": false,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     },
     {
       "name": "Name",
@@ -81,7 +82,8 @@
       "deprecatedAndHidden": false,
       "restrictedPicklist": false,
       "permissionable": true,
-      "unique": false
+      "unique": false,
+      "picklistValues": []
     }
   ],
   "childRelationships": []
