@@ -3,15 +3,15 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Grid,
   Paper,
   Stack,
   Tab,
   Tabs,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
-import type { DescribeSObject, SObjectSummary } from "../api/describe";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { useEffect, useMemo, useState } from "react";
+import type { DescribeSObject, Field, SObjectSummary } from "../api/describe";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
 import { useDescribeSObject } from "../hooks/useDescribeSObject";
 import { ObjectPicker } from "./ObjectPicker";
@@ -29,15 +29,22 @@ export function DescribeWorkspace({ sobject }: { sobject?: string }) {
       <Typography variant="h5" component="h1">
         参照情報
       </Typography>
-      <Grid container spacing={2} alignItems="stretch">
-        <Grid item xs={12} md={4}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: { md: "360px minmax(0, 1fr)" },
+          gridTemplateRows: { xs: "auto auto", md: "auto" },
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
           <ObjectPicker
             objects={objects}
             loading={loadingObjects}
             selectedObject={sobject}
           />
-        </Grid>
-        <Grid item xs={12} md={8}>
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
           <ObjectDetailPanel
             describe={describe}
             loading={Boolean(sobject) && loadingDescribe}
@@ -45,8 +52,8 @@ export function DescribeWorkspace({ sobject }: { sobject?: string }) {
             tab={tab}
             onTabChange={setTab}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Stack>
   );
 }
@@ -66,7 +73,7 @@ function ObjectDetailPanel({
 }) {
   if (!selectedSummary && !describe) {
     return (
-      <Paper variant="outlined" sx={{ p: 3, minHeight: 360 }}>
+      <Paper variant="outlined" sx={{ p: 3, minHeight: "calc(100vh - 180px)" }}>
         <Typography color="text.secondary">
           オブジェクトを選択してください。
         </Typography>
@@ -79,7 +86,12 @@ function ObjectDetailPanel({
   const custom = describe?.custom ?? selectedSummary?.custom ?? false;
 
   return (
-    <Paper variant="outlined" sx={{ minHeight: 520 }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        minHeight: "calc(100vh - 180px)",
+      }}
+    >
       <Box sx={{ p: 2.5 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Typography variant="h5" component="h2">
@@ -111,9 +123,7 @@ function ObjectDetailPanel({
           <OverviewTab describe={describe} />
         )}
         {!loading && tab === "fields" && (
-          <Typography color="text.secondary">
-            項目タブは次の実装ステップで更新します。
-          </Typography>
+          describe && <FieldsTab describe={describe} />
         )}
         {!loading && tab === "relationships" && (
           <Typography color="text.secondary">
@@ -122,6 +132,156 @@ function ObjectDetailPanel({
         )}
       </Box>
     </Paper>
+  );
+}
+
+type FieldRow = Field & {
+  id: string;
+  referenceToText: string;
+  requiredText: string;
+};
+
+const fieldColumns: GridColDef<FieldRow>[] = [
+  { field: "name", headerName: "名前", flex: 1, minWidth: 150 },
+  { field: "label", headerName: "ラベル", flex: 1, minWidth: 150 },
+  { field: "type", headerName: "型", width: 120 },
+  { field: "referenceToText", headerName: "参照先", flex: 1, minWidth: 140 },
+  { field: "requiredText", headerName: "必須", width: 90 },
+];
+
+function FieldsTab({ describe }: { describe: DescribeSObject }) {
+  const rows = useMemo<FieldRow[]>(
+    () =>
+      describe.fields.map((field) => ({
+        ...field,
+        id: field.name,
+        referenceToText: field.referenceTo.join(", "),
+        requiredText: field.nillable ? "いいえ" : "はい",
+      })),
+    [describe.fields],
+  );
+  const [selectedFieldName, setSelectedFieldName] = useState(rows[0]?.name ?? "");
+
+  useEffect(() => {
+    setSelectedFieldName(rows[0]?.name ?? "");
+  }, [rows]);
+
+  const selectedField = rows.find((field) => field.name === selectedFieldName);
+
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gap: 2,
+        gridTemplateColumns: { lg: "minmax(0, 1.45fr) minmax(360px, 1fr)" },
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}>
+          <DataGrid
+            rows={rows}
+            columns={fieldColumns}
+            hideFooter
+            disableColumnMenu
+            disableRowSelectionOnClick
+            rowSelectionModel={selectedFieldName ? [selectedFieldName] : []}
+            onRowClick={(params) => setSelectedFieldName(params.row.name)}
+            sx={{
+              borderColor: "divider",
+              "& .MuiDataGrid-row.Mui-selected": {
+                backgroundColor: "action.selected",
+              },
+            }}
+          />
+        </Box>
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            height: "calc(100vh - 335px)",
+            minHeight: 560,
+            overflow: "hidden",
+            p: 2,
+          }}
+        >
+          {selectedField ? (
+            <FieldDetail field={selectedField} />
+          ) : (
+            <Typography color="text.secondary">項目を選択してください。</Typography>
+          )}
+        </Paper>
+      </Box>
+    </Box>
+  );
+}
+
+function FieldDetail({ field }: { field: FieldRow }) {
+  const rows: Array<[string, string]> = [
+    ["名前", field.name],
+    ["ラベル", field.label],
+    ["型", field.type],
+    ["参照先", field.referenceToText || "なし"],
+    ["relationshipName", field.relationshipName || "なし"],
+    ["soapType", field.soapType || "なし"],
+    ["長さ", String(field.length)],
+    ["バイト長", String(field.byteLength)],
+    ["桁数", String(field.digits)],
+    ["小数点以下桁数", String(field.precision)],
+    ["scale", String(field.scale)],
+    ["必須", field.requiredText],
+    ["nillable", formatBoolean(field.nillable)],
+    ["作成可能", formatBoolean(field.createable)],
+    ["更新可能", formatBoolean(field.updateable)],
+    ["読み取り専用", formatBoolean(!field.createable && !field.updateable)],
+    ["デフォルト値", formatBoolean(field.defaultedOnCreate)],
+    ["計算項目", formatBoolean(field.calculated)],
+    ["自動採番", formatBoolean(field.autoNumber)],
+    ["AI 予測項目", formatBoolean(field.aiPredictionField)],
+    ["集計可能", formatBoolean(field.aggregatable)],
+    ["報告可能", formatBoolean(field.groupable)],
+    ["絞り込み可能", formatBoolean(field.filterable)],
+    ["ソート可能", formatBoolean(field.sortable)],
+    ["ケースセンシティブ", formatBoolean(field.caseSensitive)],
+    ["検索プレフィックス", formatBoolean(field.searchPrefilterable)],
+    ["ID ルックアップ", formatBoolean(field.idLookup)],
+    ["名前項目", formatBoolean(field.nameField)],
+    ["名前参照", formatBoolean(field.namePointing)],
+    ["ポリモーフィック外部キー", formatBoolean(field.polymorphicForeignKey)],
+    ["カスタム項目", formatBoolean(field.custom)],
+    ["System 項目", formatBoolean(!field.custom)],
+    ["非推奨・非表示", formatBoolean(field.deprecatedAndHidden)],
+    ["制限付き選択リスト", formatBoolean(field.restrictedPicklist)],
+    ["許可対象", formatBoolean(field.permissionable)],
+    ["一意", formatBoolean(field.unique)],
+  ];
+
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="h6">項目詳細</Typography>
+      <Box
+        component="dl"
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "minmax(150px, 190px) 1fr",
+          m: 0,
+          maxHeight: "calc(100vh - 395px)",
+          overflowY: "auto",
+          rowGap: 1,
+        }}
+      >
+        {rows.map(([label, value]) => (
+          <Box key={label} sx={{ display: "contents" }}>
+            <Typography component="dt" color="text.secondary" variant="body2">
+              {label}
+            </Typography>
+            <Typography component="dd" sx={{ m: 0 }} variant="body2">
+              {value}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Stack>
   );
 }
 

@@ -57,7 +57,7 @@ function RootLayout() {
           </Button>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth={false} sx={{ maxWidth: 1680, mx: "auto", px: 4, py: 3 }}>
         <Outlet />
       </Container>
     </Box>
