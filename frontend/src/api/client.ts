@@ -1,3 +1,5 @@
+import type { z } from "zod";
+
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -53,6 +55,12 @@ export async function ensureOk(res: Response): Promise<Response> {
     // 非 JSON レスポンス → 既定値のまま
   }
   throw new ApiError(code, message, res.status);
+}
+
+export function parseApiResponse<T>(schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (result.success) return result.data;
+  throw new ApiError("INVALID_RESPONSE", "APIレスポンスの形式が不正です", 500);
 }
 
 function getCookie(name: string): string | null {

@@ -9,7 +9,11 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import {
+  DataGrid,
+  type GridColDef,
+  type GridRowSelectionModel,
+} from "@mui/x-data-grid";
 import { useEffect, useMemo, useState } from "react";
 import type {
   ChildRelationship,
@@ -24,7 +28,8 @@ import { ObjectPicker } from "./ObjectPicker";
 
 export function DescribeWorkspace({ sobject }: { sobject?: string }) {
   const { data: globalData, isLoading: loadingObjects } = useDescribeGlobal();
-  const { data: describe, isLoading: loadingDescribe } = useDescribeSObject(sobject);
+  const { data: describe, isLoading: loadingDescribe } =
+    useDescribeSObject(sobject);
   const [tab, setTab] = useState("overview");
 
   const objects = globalData?.sobjects ?? [];
@@ -128,11 +133,11 @@ function ObjectDetailPanel({
         {!loading && tab === "overview" && describe && (
           <OverviewTab describe={describe} />
         )}
-        {!loading && tab === "fields" && (
-          describe && <FieldsTab describe={describe} />
+        {!loading && tab === "fields" && describe && (
+          <FieldsTab describe={describe} />
         )}
-        {!loading && tab === "relationships" && (
-          describe && <RelationshipsTab describe={describe} />
+        {!loading && tab === "relationships" && describe && (
+          <RelationshipsTab describe={describe} />
         )}
       </Box>
     </Paper>
@@ -144,7 +149,12 @@ type ChildRelationshipRow = ChildRelationship & {
 };
 
 const childRelationshipColumns: GridColDef<ChildRelationshipRow>[] = [
-  { field: "childSObject", headerName: "子オブジェクト", flex: 1, minWidth: 180 },
+  {
+    field: "childSObject",
+    headerName: "子オブジェクト",
+    flex: 1,
+    minWidth: 180,
+  },
   { field: "field", headerName: "項目", flex: 1, minWidth: 180 },
   {
     field: "relationshipName",
@@ -167,7 +177,9 @@ function RelationshipsTab({ describe }: { describe: DescribeSObject }) {
   return (
     <Stack spacing={1.5}>
       <Typography variant="h6">子リレーション</Typography>
-      <Box sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}>
+      <Box
+        sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}
+      >
         <DataGrid
           rows={rows}
           columns={childRelationshipColumns}
@@ -206,13 +218,22 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
       })),
     [describe.fields],
   );
-  const [selectedFieldName, setSelectedFieldName] = useState(rows[0]?.name ?? "");
+  const [selectedFieldName, setSelectedFieldName] = useState(
+    rows[0]?.name ?? "",
+  );
 
   useEffect(() => {
     setSelectedFieldName(rows[0]?.name ?? "");
   }, [rows]);
 
   const selectedField = rows.find((field) => field.name === selectedFieldName);
+  const rowSelectionModel = useMemo<GridRowSelectionModel>(
+    () => ({
+      type: "include",
+      ids: selectedFieldName ? new Set([selectedFieldName]) : new Set(),
+    }),
+    [selectedFieldName],
+  );
 
   return (
     <Box
@@ -223,14 +244,16 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        <Box sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}>
+        <Box
+          sx={{ height: "calc(100vh - 335px)", minHeight: 560, width: "100%" }}
+        >
           <DataGrid
             rows={rows}
             columns={fieldColumns}
             hideFooter
             disableColumnMenu
             disableRowSelectionOnClick
-            rowSelectionModel={selectedFieldName ? [selectedFieldName] : []}
+            rowSelectionModel={rowSelectionModel}
             onRowClick={(params) => setSelectedFieldName(params.row.name)}
             sx={{
               borderColor: "divider",
@@ -254,7 +277,9 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
           {selectedField ? (
             <FieldDetailPanel field={selectedField} />
           ) : (
-            <Typography color="text.secondary">項目を選択してください。</Typography>
+            <Typography color="text.secondary">
+              項目を選択してください。
+            </Typography>
           )}
         </Paper>
       </Box>
