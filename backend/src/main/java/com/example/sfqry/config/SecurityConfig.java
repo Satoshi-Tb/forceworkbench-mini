@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
+                .headers(headers -> headers.addHeaderWriter((request, response) ->
+                        response.setHeader("X-Robots-Tag", "noindex, nofollow")))
                 .addFilterBefore(
                         new SessionAuthenticationFilter(sessionContextProvider),
                         UsernamePasswordAuthenticationFilter.class)
