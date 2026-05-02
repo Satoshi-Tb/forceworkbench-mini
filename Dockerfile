@@ -4,7 +4,7 @@ FROM node:24-alpine AS frontend-build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 # サプライチェーン対策: 依存パッケージの postinstall/preinstall を無効化
-RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
+RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 
@@ -13,7 +13,7 @@ WORKDIR /app
 COPY backend/pom.xml ./
 COPY backend/src ./src
 COPY --from=frontend-build /app/dist ./src/main/resources/static
-RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
+RUN mvn -B -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
