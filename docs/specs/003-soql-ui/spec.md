@@ -26,7 +26,7 @@
 - ビルダーの入力変更に応じて SOQL テキストエリアへ文字列が反映される。
 - SOQL テキストエリアはユーザーが直接編集でき、既存の `実行`、`次のページ`、`CSV` の動作は維持される。
 - `ResultGrid` の UI、列定義、表示スタイル、呼び出し条件を変更しない。
-- `npm run lint` と `npm run build` が通る。
+- `npm run format`、`npm run lint`、`npm run build` が通る。
 
 ## 現状調査メモ
 
@@ -102,7 +102,18 @@ QueryPage
   └─ ResultGrid
 ```
 
-`QueryPage` は既存のクエリ実行責務を維持する。`SoqlQueryBuilder` はビルダー state と入力 UI を持ち、生成した SOQL を `onSoqlChange(nextSoql)` で親へ渡す。
+`QueryPage` は既存のクエリ実行責務に加え、ビルダー state と SOQL 表示用 state を保持する。`SoqlQueryBuilder` は state と setter を props で受け取り UI のみを担当する presentational component とする（state を親に集約することで `useMemo` で derived SOQL を作る設計と整合させる。詳細は「SOQL テキストエリアとの連動」を参照）。
+
+`SoqlQueryBuilder` の props (例):
+
+```ts
+type SoqlQueryBuilderProps = {
+  state: QueryBuilderState;
+  onChange: (next: QueryBuilderState) => void;
+};
+```
+
+state 粒度（`QueryBuilderState` を 1 つの `useState` で持つか、入力ごとに `useState` を分けるか）は実装時に決めてよい。
 
 ### ビルダー state
 
@@ -127,8 +138,7 @@ type QueryBuilderState = {
 
 - `limit` は入力中の空文字を扱うため string で保持する。
 - `condition.id` は React の key 用。`crypto.randomUUID()` ではなく、単純な連番または `Date.now()` 由来のローカル生成で足りる。
-- 初期状態は選択なしを基本にする。
-- サンプル状態を表示するかどうかは実装前に決める必要がある。実運用画面では自動で `Account` を選ぶと意図しない SOQL 上書きが起きやすいため、デフォルトは選択なしを推奨する。
+- 初期状態は選択なしとする（自動で `Account` を選ぶと意図しない SOQL 上書きが起きやすいため）。
 
 ## UI 仕様
 
@@ -144,8 +154,10 @@ type QueryBuilderState = {
 ### オブジェクト選択
 
 - `useDescribeGlobal()` で取得した `sobjects` を `name` 昇順で表示する。
-- `Select` または `Autocomplete` を使う。
+- MUI の `Autocomplete` (単一選択) を使う。仮想化は行わない（移植元の素 `<select>` 全件出力 (`work/reference/workbench/shared.php:573-592`)、新バージョン参照画面の `ObjectPicker` (`frontend/src/components/ObjectPicker.tsx`) のいずれも仮想化なしで成立しているため）。
 - `queryable` は global summary には現状ないため、一覧は `sobjects` をそのまま使う。queryable 判定は選択後の describe に含まれるため、必要なら非 queryable の注意表示だけに留める。
+- ロード中: `Autocomplete` の `loading` prop を有効にしてスピナを表示する。
+- 取得エラー時: `Autocomplete` の options を空にし、SOQL 実行エラー表示と同じ位置の `Alert` でエラーメッセージを表示する。
 - オブジェクト変更時:
   - `objectName` を更新する。
   - `fields`、`orderByField`、`conditions` をクリアする。
@@ -160,6 +172,8 @@ type QueryBuilderState = {
 - 初期実装では全項目を表示する。必要なら後続で `deprecatedAndHidden` を除外するが、今回の必須範囲には含めない。
 - 選択順はユーザーが選んだ順を維持し、SOQL の `SELECT` もその順にする。
 - オブジェクト未選択または describe 未取得時は disabled にする。
+- ロード中: disabled のままスピナを併記する。
+- 取得エラー時: options を空にし、SOQL 実行エラー表示と同じ位置の `Alert` でエラーメッセージを表示する。
 
 ### ソート設定
 
@@ -180,7 +194,7 @@ type QueryBuilderState = {
 - 空文字を許可する。
 - 入力値は正の整数のみを有効とする。
 - 無効値の場合は SOQL に `LIMIT` を出さず、必要なら `helperText` で警告する。
-- 初期値は空文字を推奨する。サンプル再現時のみ `100` を使う。
+- 初期値は空文字とする。
 
 ### 条件
 
@@ -191,6 +205,8 @@ type QueryBuilderState = {
   - 値入力
   - 削除ボタン
 - 条件項目候補は `describe.fields.filter((field) => field.filterable)` を基本にする。
+- 演算子セレクトの候補は、フィールド型に関係なく全演算子を表示する（移植元踏襲）。型ごとに意味のない組み合わせ（例: `boolean` に `LIKE`）もユーザーが選択可能になるが、初期実装では型別フィルタを行わない。
+- `IN`、`NOT IN`、`INCLUDES`、`EXCLUDES` の値入力は、ユーザーがカンマ区切り（例: `'a','b'`）を手入力したものをそのまま `(...)` で囲む。フォーマット変換は行わない（移植元踏襲）。
 - `条件を追加` ボタンで空行を追加する。
 - 空欄がある条件行は SOQL に出力しない。
 - 条件はすべて `AND` で連結する。
@@ -215,6 +231,7 @@ LIMIT {limit}
 
 - `objectName` が空、または `fields` が空の場合は SOQL を生成しない。
 - `fields` は `, ` で連結する。
+- 選択されたフィールドはすべて `SELECT` に含める（redesign 文書のサンプル SOQL では `SELECT` 例で `BillingCity` が省略されているが、ビルダー仕様としては選択フィールドを SELECT に含めるのが正しい挙動）。
 - `count()` は今回の redesign 要件に明記されていないため候補に追加しない。
 
 ### WHERE
@@ -225,11 +242,11 @@ LIMIT {limit}
   - `starts`: `LIKE 'value%'`
   - `ends`: `LIKE '%value'`
   - `contains`: `LIKE '%value%'`
-- `IN`、`NOT IN`、`INCLUDES`、`EXCLUDES` は入力値を `(...)` で囲む。
-- `null` はクォートしない。
+- `IN`、`NOT IN`、`INCLUDES`、`EXCLUDES` はユーザーが手入力した値をそのまま `(...)` で囲む。
+- 値文字列が `null`（小文字）のときはクォートしない（移植元踏襲）。この仕様により、文字列リテラル `null` を SOQL に出すことはできない。
 - `date`、`datetime`、`currency`、`percent`、`double`、`int`、`boolean` はクォートしない。
 - その他の型はシングルクォートで囲む。
-- 文字列値内のシングルクォートは `\\'` にエスケープする。
+- 文字列値内のシングルクォートはバックスラッシュ + シングルクォート（`\'`）にエスケープする。バックスラッシュ自身は `\\` にエスケープする。
 
 ### ORDER BY
 
@@ -245,44 +262,24 @@ LIMIT {limit}
 
 ## SOQL テキストエリアとの連動
 
-- ビルダー入力が有効な SOQL を生成できる場合、`setSoql(generatedSoql)` を呼ぶ。
-- ユーザーが SOQL テキストエリアを直接編集した場合も編集を許可する。
+- ビルダー入力（オブジェクト、フィールド、ソート、LIMIT、条件）はそれぞれ `useState` で管理し、UI 側は `onChange` ハンドラで更新する。
+- 生成 SOQL は `useMemo` で derive する。依存配列にはビルダー入力の各 state を列挙する。`useEffect` を使った同期は行わない（無限ループ・タイミング依存を避けるため）。
+- 直接編集された SOQL を保持する別 state（例: `manualSoqlOverride: string | null`）を `QueryPage` に置き、テキストエリアの value は `manualSoqlOverride ?? derivedSoql` の優先順で表示する。
+- ユーザーが SOQL テキストエリアを編集すると `manualSoqlOverride` が更新される。
+- ビルダー側のいずれかの入力が変更されたら、その `onChange` ハンドラ内で `manualSoqlOverride` を `null` に戻す。これによりビルダー操作時は再び derive 結果が表示される。
 - 直接編集した SOQL をビルダー state へ逆解析する処理は実装しない。
-- 直接編集後にビルダーを再操作すると、ビルダー state から再生成した SOQL でテキストエリアを更新する。
-- この挙動は実装が単純で、既存の実行ロジックを壊しにくい。
-
-## サンプル状態の扱い
-
-`soql-query-redesign.md` にはサンプル状態として `Account`、複数フィールド、条件、ソート、LIMIT が示されている。一方で同文書のオブジェクト選択要件は「デフォルト: 選択なし」である。
-
-実装では次を推奨する。
-
-- 初期状態は選択なし。
-- サンプル値はテストケースまたは Story 的な確認観点として扱う。
-- もし初期表示でサンプルを入れる必要がある場合は、ユーザー確認後に `Account` を初期選択する。
-
-サンプル確認用の期待 SOQL:
-
-```sql
-SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity
-FROM Account
-WHERE OwnerId = '12345'
-AND NumberOfLocations__c = 12345
-ORDER BY BillingCity ASC NULLS LAST
-LIMIT 100
-```
-
-注記: redesign 文書のサンプル SOQL は選択フィールド一覧に `BillingCity` がある一方、`SELECT` 例では `BillingCity` が省略されている。ビルダー仕様としては、選択されたフィールドはすべて `SELECT` に含める。
+- ビルダー再操作で直接編集が破棄されることに対する警告ダイアログは出さない（実装単純化を優先、後送り）。
 
 ## 実装手順
 
+0. `docs/specs/003-frontend-library-updates/spec.md` の実装が完了していることを確認する。
 1. `frontend/src/routes/query.tsx` の既存実行処理を維持したまま、ビルダー挿入位置を決める。
 2. `SoqlQueryBuilder` コンポーネントを追加する。
 3. Describe hooks を使ってオブジェクト一覧と選択オブジェクトの fields を取得する。
 4. オブジェクト選択、複数フィールド選択、ソート、LIMIT、条件行 UI を実装する。
-5. SOQL 組み立て関数を追加し、ビルダー state 変更時に `onSoqlChange` する。
-6. 既存 SOQL テキストエリア、実行ボタン、次ページボタン、CSV ボタン、`ResultGrid` の動作を変更していないことを確認する。
-7. lint/build を実行する。
+5. SOQL 組み立て関数を追加し、`QueryPage` の `useMemo` でビルダー state から derived SOQL を生成する。テキストエリアは `manualSoqlOverride ?? derivedSoql` を表示する。
+6. 既存 SOQL テキストエリア、実行ボタン、次ページボタン、CSV ボタン、`ResultGrid` の動作を変更していないことを確認する（特に `frontend/src/components/ResultGrid.tsx` の `git diff` が空であることを確認する）。
+7. format/lint/build を実行する。
 
 ## テスト・検証観点
 
@@ -305,7 +302,11 @@ LIMIT 100
   - `ends` は `LIKE '%value'`
   - `contains` は `LIKE '%value%'`
 - IN 系:
-  - `IN` は `field IN (value)` になる。
+  - `IN` は `field IN (value)` になる（ユーザー入力をそのまま括弧で囲む）。
+- エスケープ:
+  - 文字列値 `O'Brien` が `'O\'Brien'` になる。
+  - 文字列値 `c:\path` が `'c:\\path'` になる。
+  - 値文字列 `null`（小文字）はクォートされず `field = null` になる。
 - ソート:
   - ソート項目ありで `ORDER BY BillingCity ASC NULLS LAST` が出る。
   - ソート項目なしでは `ORDER BY` が出ない。
@@ -321,20 +322,30 @@ LIMIT 100
   - 次ページ取得が既存通り動く。
   - CSV ダウンロードが既存通り動く。
   - `ResultGrid` のコード差分がない。
+- サンプル統合動作:
+  - オブジェクト `Account`、フィールド `AccountNumber, AccountSource, AnnualRevenue, BillingCity`、条件 `OwnerId = '12345'` および `NumberOfLocations__c = 12345`、ソート `BillingCity ASC NULLS LAST`、LIMIT `100` を入力すると、テキストエリアに次の SOQL が生成される。
+
+    ```sql
+    SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity
+    FROM Account
+    WHERE OwnerId = '12345'
+    AND NumberOfLocations__c = 12345
+    ORDER BY BillingCity ASC NULLS LAST
+    LIMIT 100
+    ```
 
 ## 実行するコマンド
 
 ```sh
 cd frontend
+npm run format
 npm run lint
 npm run build
 ```
 
-`package.json` に `format` と `test` は現状定義されていないため、追加しない。必要であれば別タスクで scripts を整備する。
+`package.json` に `test` は現状定義されていないため、追加しない。必要であれば別タスクで scripts を整備する。
 
 ## 確認が必要な事項
 
-- 初期表示は redesign 文書の「デフォルト: 選択なし」を優先するか、画像のように `Account` のサンプル状態を表示するか。
 - `count()` をフィールド候補に含めるか。移植元にはあるが、今回の redesign 要件には含まれていないため、初期実装では含めない方針。
-- 条件値の型別入力をどこまで行うか。初期実装ではすべてテキスト入力とし、クォート規則だけ型に応じて変える方針。
-- `IN` 系の値入力でユーザーに `a,b,c` と入力させるか、`'a','b','c'` まで手入力させるか。移植元に合わせるなら入力値をそのまま `(...)` で囲む。
+- 条件値の型別入力（datetime ピッカー、boolean トグル等）をどこまで行うか。初期実装ではすべてテキスト入力とし、クォート規則だけ型に応じて変える方針。
