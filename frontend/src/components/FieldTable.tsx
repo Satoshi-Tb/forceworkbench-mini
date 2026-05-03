@@ -9,7 +9,12 @@ const fieldColumns: GridColDef[] = [
 ];
 
 const childColumns: GridColDef[] = [
-  { field: "childSObject", headerName: "子オブジェクト", flex: 1, minWidth: 160 },
+  {
+    field: "childSObject",
+    headerName: "子オブジェクト",
+    flex: 1,
+    minWidth: 160,
+  },
   { field: "field", headerName: "項目", flex: 1, minWidth: 160 },
   {
     field: "relationshipName",
@@ -39,11 +44,19 @@ export function FieldTable({
     <Stack spacing={2}>
       <Typography variant="h6">項目</Typography>
       <Box sx={{ height: 420 }}>
-        <DataGrid rows={fields} columns={fieldColumns} disableRowSelectionOnClick />
+        <DataGrid
+          rows={fields}
+          columns={fieldColumns}
+          disableRowSelectionOnClick
+        />
       </Box>
       <Typography variant="h6">子リレーション</Typography>
       <Box sx={{ height: 320 }}>
-        <DataGrid rows={children} columns={childColumns} disableRowSelectionOnClick />
+        <DataGrid
+          rows={children}
+          columns={childColumns}
+          disableRowSelectionOnClick
+        />
       </Box>
     </Stack>
   );
