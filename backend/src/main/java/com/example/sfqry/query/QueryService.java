@@ -20,6 +20,7 @@ public class QueryService {
     }
 
     public QueryResultDto query(String soql) {
+        SoqlQueryGuard.validateSelectQuery(soql);
         audit.info("QUERY user={} soql={}", currentEmail(), soql);
         return salesforceClient.query(soql);
     }
@@ -30,6 +31,7 @@ public class QueryService {
     }
 
     public String exportCsv(String soql) {
+        SoqlQueryGuard.validateSelectQuery(soql);
         audit.info("CSV user={} soql={}", currentEmail(), soql);
         return salesforceClient.exportCsv(soql);
     }

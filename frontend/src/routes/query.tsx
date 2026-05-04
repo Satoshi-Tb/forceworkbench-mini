@@ -7,11 +7,19 @@ import {
   Typography,
 } from "@mui/material";
 import { createRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
 import { downloadCsv, nextQueryPage, type QueryResult } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
+import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
+import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
+import { useDescribeSObject } from "../hooks/useDescribeSObject";
 import { useRunSoql } from "../hooks/useRunSoql";
+import {
+  buildSoql,
+  createInitialQueryBuilderState,
+  type QueryBuilderState,
+} from "../utils/soqlBuilder";
 import { rootRoute } from "./__root";
 
 export const queryRoute = createRoute({
@@ -21,17 +29,50 @@ export const queryRoute = createRoute({
 });
 
 function QueryPage() {
-  const [soql, setSoql] = useState("SELECT Id, Name FROM Account LIMIT 10");
+  const [builderState, setBuilderState] = useState<QueryBuilderState>(() =>
+    createInitialQueryBuilderState(),
+  );
+  const [manualSoqlOverride, setManualSoqlOverride] = useState<string | null>(
+    "SELECT Id, Name FROM Account LIMIT 10",
+  );
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const runSoql = useRunSoql();
+  const {
+    data: globalData,
+    isLoading: objectsLoading,
+    error: objectsError,
+  } = useDescribeGlobal();
+  const {
+    data: describe,
+    isLoading: describeLoading,
+    error: describeError,
+  } = useDescribeSObject(builderState.objectName || undefined);
+  const objects = useMemo(
+    () =>
+      [...(globalData?.sobjects ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    [globalData?.sobjects],
+  );
+  const derivedSoql = useMemo(
+    () => buildSoql(builderState, describe?.fields ?? []),
+    [builderState, describe?.fields],
+  );
+  const soql = manualSoqlOverride ?? derivedSoql;
+
+  const handleBuilderChange = (next: QueryBuilderState) => {
+    setBuilderState(next);
+    setManualSoqlOverride(null);
+  };
 
   const handleRun = async () => {
     setError(null);
     try {
       const next = await runSoql.mutateAsync(soql);
-      setResult(next);
+      setResult(withFallbackColumns(next, soql));
     } catch (e) {
+      setResult(null);
       setError(e instanceof ApiError ? e.message : "SOQL実行に失敗しました");
     }
   };
@@ -40,8 +81,11 @@ function QueryPage() {
     if (!result?.queryRunId) return;
     setError(null);
     try {
-      setResult(await nextQueryPage(result.queryRunId));
+      setResult(
+        withFallbackColumns(await nextQueryPage(result.queryRunId), soql),
+      );
     } catch (e) {
+      setResult(null);
       setError(
         e instanceof ApiError ? e.message : "次のページの取得に失敗しました",
       );
@@ -71,10 +115,24 @@ function QueryPage() {
         SOQL
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
+      {objectsError && (
+        <Alert severity="error">オブジェクト情報の取得に失敗しました</Alert>
+      )}
+      {describeError && (
+        <Alert severity="error">項目情報の取得に失敗しました</Alert>
+      )}
+      <SoqlQueryBuilder
+        state={builderState}
+        objects={objects}
+        objectsLoading={objectsLoading}
+        describe={describe}
+        describeLoading={describeLoading}
+        onChange={handleBuilderChange}
+      />
       <TextField
         label="SOQL"
         value={soql}
-        onChange={(event) => setSoql(event.target.value)}
+        onChange={(event) => setManualSoqlOverride(event.target.value)}
         multiline
         minRows={4}
         fullWidth
@@ -101,4 +159,21 @@ function QueryPage() {
       {result && <ResultGrid result={result} />}
     </Stack>
   );
+}
+
+function withFallbackColumns(result: QueryResult, soql: string): QueryResult {
+  if (result.columns.length > 0 || result.rows.length > 0) return result;
+  // Salesforce の query 結果が 0 件の場合、レスポンスだけでは列情報を復元できない。
+  // DataGrid が "No columns" ではなく "No rows" を表示できるよう、SELECT 句から列名を補完する。
+  const columns = extractSelectedColumns(soql);
+  return columns.length > 0 ? { ...result, columns } : result;
+}
+
+function extractSelectedColumns(soql: string): string[] {
+  const match = soql.match(/^\s*select\s+([\s\S]+?)\s+from\s+/i);
+  if (!match) return [];
+  return match[1]
+    .split(",")
+    .map((column) => column.trim())
+    .filter((column) => column);
 }
