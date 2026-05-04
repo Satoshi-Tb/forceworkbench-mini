@@ -64,10 +64,16 @@ public class MockSalesforceClient implements SalesforceClient {
     @Override
     public QueryResultDto query(String soql) {
         String normalized = soql == null ? "" : soql.toLowerCase(Locale.ROOT);
-        if (normalized.contains(" from contact")) {
+        if (normalized.contains("from contact")) {
             return result(null, "mock/query/contact-basic.csv", true);
         }
-        if (normalized.contains(" from account")) {
+        if (normalized.contains("from invoice__c")) {
+            return result(null, "mock/query/invoice-basic.csv", true);
+        }
+        if (normalized.contains("from opportunity")) {
+            return result(null, "mock/query/opportunity-basic.csv", true);
+        }
+        if (normalized.contains("from account")) {
             String runId = UUID.randomUUID().toString();
             sessionContext.getQueryRuns().put(
                     runId,
