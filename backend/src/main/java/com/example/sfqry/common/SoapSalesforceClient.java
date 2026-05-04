@@ -305,11 +305,26 @@ public class SoapSalesforceClient implements SalesforceClient {
         while (it.hasNext()) {
             XmlObject child = it.next();
             String name = child.getName().getLocalPart();
-            if (name != null && !name.isEmpty() && !"type".equals(name)) {
+            if (name != null
+                    && !name.isEmpty()
+                    && !"type".equals(name)
+                    && !isBlankSyntheticId(name, records)) {
                 cols.add(name);
             }
         }
         return new ArrayList<>(cols);
+    }
+
+    private boolean isBlankSyntheticId(String name, SObject[] records) {
+        if (!"Id".equals(name)) {
+            return false;
+        }
+        for (SObject record : records) {
+            if (record.getField("Id") == null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Map<String, String> toRow(SObject record, List<String> columns) {

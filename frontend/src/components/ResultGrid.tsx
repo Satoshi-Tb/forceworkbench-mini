@@ -9,14 +9,22 @@ export function ResultGrid({ result }: { result: QueryResult }) {
     flex: 1,
     minWidth: 150,
   }));
-  const rows = result.rows.map((row, index) => ({
-    id: row.Id ?? index,
-    ...row,
-  }));
+  const rows = result.rows.map((row, index) => {
+    const recordId = row.Id?.trim();
+    return {
+      ...row,
+      __rowId: recordId ? recordId : index,
+    };
+  });
 
   return (
     <Box sx={{ height: 420, width: "100%" }}>
-      <DataGrid rows={rows} columns={columns} disableRowSelectionOnClick />
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        getRowId={(row) => row.__rowId}
+        disableRowSelectionOnClick
+      />
     </Box>
   );
 }

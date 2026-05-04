@@ -68,6 +68,7 @@ function QueryPage() {
 
   const handleRun = async () => {
     setError(null);
+    setResult(null);
     try {
       const next = await runSoql.mutateAsync(soql);
       setResult(withFallbackColumns(next, soql));
