@@ -9,7 +9,6 @@ import {
   Checkbox,
   CircularProgress,
   FormControl,
-  FormHelperText,
   IconButton,
   InputLabel,
   ListItemText,
@@ -19,7 +18,6 @@ import {
   Stack,
   TextField,
   Typography,
-  type SelectChangeEvent,
 } from "@mui/material";
 import type { DescribeSObject, Field, SObjectSummary } from "../api/describe";
 import {
@@ -49,6 +47,9 @@ export function SoqlQueryBuilder({
   const selectedObject =
     objects.find((object) => object.name === state.objectName) ?? null;
   const fields = describe?.fields ?? [];
+  const selectedFields = state.fields
+    .map((fieldName) => fields.find((field) => field.name === fieldName))
+    .filter((field): field is Field => Boolean(field));
   const sortableFields = fields.filter((field) => field.sortable);
   const filterableFields = fields.filter((field) => field.filterable);
   const fieldsDisabled = !state.objectName || describeLoading || !describe;
@@ -135,38 +136,39 @@ export function SoqlQueryBuilder({
                 />
               )}
             />
-            <FormControl disabled={fieldsDisabled} fullWidth>
-              <InputLabel id="soql-fields-label">フィールド</InputLabel>
-              <Select<string[]>
-                labelId="soql-fields-label"
-                multiple
-                value={state.fields}
-                label="フィールド"
-                renderValue={(selected) => selected.join(", ")}
-                onChange={(event: SelectChangeEvent<string[]>) =>
-                  onChange({
-                    ...state,
-                    fields:
-                      typeof event.target.value === "string"
-                        ? event.target.value.split(",")
-                        : event.target.value,
-                  })
-                }
-              >
-                {fields.map((field) => (
-                  <MenuItem key={field.name} value={field.name}>
-                    <Checkbox checked={state.fields.includes(field.name)} />
-                    <ListItemText
-                      primary={field.label}
-                      secondary={field.name}
-                    />
-                  </MenuItem>
-                ))}
-              </Select>
-              {describeLoading && (
-                <FormHelperText>項目を取得中です</FormHelperText>
+            <Autocomplete
+              multiple
+              disableCloseOnSelect
+              options={fields}
+              value={selectedFields}
+              disabled={fieldsDisabled}
+              getOptionLabel={(option) => `${option.label} (${option.name})`}
+              isOptionEqualToValue={(option, value) =>
+                option.name === value.name
+              }
+              onChange={(_, nextFields) =>
+                onChange({
+                  ...state,
+                  fields: nextFields.map((field) => field.name),
+                })
+              }
+              renderOption={(props, option, { selected }) => (
+                <li {...props}>
+                  <Checkbox checked={selected} />
+                  <ListItemText
+                    primary={option.label}
+                    secondary={option.name}
+                  />
+                </li>
               )}
-            </FormControl>
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="フィールド"
+                  helperText={describeLoading ? "項目を取得中です" : " "}
+                />
+              )}
+            />
             <TextField
               label="LIMIT"
               type="number"
