@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +46,15 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
+                .exceptionHandling(exceptions -> exceptions
+                        // セッション切れなどの未認証 API アクセスは、フロントが再ログインへ誘導できるよう 401 に揃える。
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            response.setContentType("application/json");
+                            response.getWriter()
+                                    .write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Login required\"}");
+                        }))
                 .headers(headers -> headers.addHeaderWriter((request, response) ->
                         response.setHeader("X-Robots-Tag", "noindex, nofollow")))
                 .addFilterBefore(
