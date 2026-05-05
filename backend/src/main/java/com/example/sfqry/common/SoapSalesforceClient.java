@@ -9,7 +9,6 @@ import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.describe.dto.FieldDto;
 import com.example.sfqry.query.QueryResultDto;
-import com.example.sfqry.query.QueryRunState;
 import com.sforce.soap.partner.ChildRelationship;
 import com.sforce.soap.partner.DescribeGlobalResult;
 import com.sforce.soap.partner.DescribeGlobalSObjectResult;
@@ -33,7 +32,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class SoapSalesforceClient implements SalesforceClient {
 
     private static final Logger log = LoggerFactory.getLogger(SoapSalesforceClient.class);
+    private static final int QUERY_PAGE_LIMIT = 2000;
 
     private final SalesforceProperties props;
     private final PartnerConnectionFactory connectionFactory;
@@ -115,28 +114,7 @@ public class SoapSalesforceClient implements SalesforceClient {
         try {
             PartnerConnection conn = queryConnection();
             QueryResult qr = conn.query(soql);
-            String runId = qr.isDone() ? null : registerNewRun(qr);
-            return convertResult(qr, runId);
-        } catch (ConnectionException e) {
-            throw mapException(e);
-        }
-    }
-
-    @Override
-    public QueryResultDto queryMore(String runId) {
-        QueryRunState state = sessionContext.getQueryRuns().get(runId);
-        if (state == null) {
-            throw new ApiException("INVALID_QUERY_RUN", "Query run not found", HttpStatus.NOT_FOUND);
-        }
-        try {
-            PartnerConnection conn = queryConnection();
-            QueryResult qr = conn.queryMore(state.nextResource());
-            if (qr.isDone()) {
-                sessionContext.getQueryRuns().remove(runId);
-                return convertResult(qr, null);
-            }
-            sessionContext.getQueryRuns().put(runId, new QueryRunState(qr.getQueryLocator(), false));
-            return convertResult(qr, runId);
+            return convertResult(qr);
         } catch (ConnectionException e) {
             throw mapException(e);
         }
@@ -168,7 +146,8 @@ public class SoapSalesforceClient implements SalesforceClient {
             DescribeGlobalResult dgr = conn.describeGlobal();
             List<DescribeGlobalDto.SObjectSummaryDto> sobjects = new ArrayList<>();
             for (DescribeGlobalSObjectResult s : dgr.getSobjects()) {
-                sobjects.add(new DescribeGlobalDto.SObjectSummaryDto(s.getName(), s.getLabel(), s.isCustom()));
+                sobjects.add(new DescribeGlobalDto.SObjectSummaryDto(
+                        s.getName(), s.getLabel(), s.isCustom(), s.isQueryable()));
             }
             return new DescribeGlobalDto(sobjects);
         } catch (ConnectionException e) {
@@ -275,25 +254,17 @@ public class SoapSalesforceClient implements SalesforceClient {
 
     private PartnerConnection queryConnection() throws ConnectionException {
         PartnerConnection conn = connection();
-        if (props.queryBatchSize() != null) {
-            conn.setQueryOptions(props.queryBatchSize());
-        }
+        conn.setQueryOptions(props.queryBatchSize() == null ? QUERY_PAGE_LIMIT : props.queryBatchSize());
         return conn;
     }
 
-    private QueryResultDto convertResult(QueryResult qr, String runId) {
+    private QueryResultDto convertResult(QueryResult qr) {
         List<String> columns = extractColumns(qr.getRecords());
         List<Map<String, String>> rows = new ArrayList<>();
         for (SObject record : qr.getRecords()) {
             rows.add(toRow(record, columns));
         }
-        return new QueryResultDto(runId, columns, rows, qr.isDone());
-    }
-
-    private String registerNewRun(QueryResult qr) {
-        String runId = UUID.randomUUID().toString();
-        sessionContext.getQueryRuns().put(runId, new QueryRunState(qr.getQueryLocator(), false));
-        return runId;
+        return new QueryResultDto(columns, rows, !qr.isDone());
     }
 
     private List<String> extractColumns(SObject[] records) {

@@ -31,7 +31,7 @@ npm run dev
 cp .env.example .env
 ```
 
-`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしのモック起動。real プロファイル (空または未指定) では `SF_USERNAME` / `SF_PASSWORD` / `SF_SECURITY_TOKEN` / `SF_LOGIN_URL` / `SF_API_VERSION` を設定する。`SF_QUERY_BATCH_SIZE` は SOQL query/queryMore の batch size 指定で、空なら Salesforce のデフォルトを使う。
+`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしのモック起動。real プロファイル (空または未指定) では `SF_USERNAME` / `SF_PASSWORD` / `SF_SECURITY_TOKEN` / `SF_LOGIN_URL` / `SF_API_VERSION` を設定する。SOQL 画面の取得上限は Salesforce の `LIMIT` 上限に合わせて既定 2,000 件とし、デバッグ時のみ `SF_QUERY_BATCH_SIZE` で上書きできる。
 
 SOAP `login()` は Salesforce 側の制約により API v65.0 以上では利用できないため、real プロファイルのログイン確認では `SF_API_VERSION=64.0` を指定する。新規 Developer Edition org では `Setup` の `ユーザインターフェース` で `Enable SOAP API login()` を有効化する必要がある。
 

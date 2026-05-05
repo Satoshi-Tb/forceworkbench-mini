@@ -9,7 +9,7 @@ import {
 import { createRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { downloadCsv, nextQueryPage, type QueryResult } from "../api/query";
+import { downloadCsv, type QueryResult } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
 import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
@@ -50,9 +50,9 @@ function QueryPage() {
   } = useDescribeSObject(builderState.objectName || undefined);
   const objects = useMemo(
     () =>
-      [...(globalData?.sobjects ?? [])].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      ),
+      [...(globalData?.sobjects ?? [])]
+        .filter((object) => object.queryable)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [globalData?.sobjects],
   );
   const derivedSoql = useMemo(
@@ -75,21 +75,6 @@ function QueryPage() {
     } catch (e) {
       setResult(null);
       setError(e instanceof ApiError ? e.message : "SOQL実行に失敗しました");
-    }
-  };
-
-  const handleNext = async () => {
-    if (!result?.queryRunId) return;
-    setError(null);
-    try {
-      setResult(
-        withFallbackColumns(await nextQueryPage(result.queryRunId), soql),
-      );
-    } catch (e) {
-      setResult(null);
-      setError(
-        e instanceof ApiError ? e.message : "次のページの取得に失敗しました",
-      );
     }
   };
 
@@ -146,17 +131,16 @@ function QueryPage() {
         >
           実行
         </Button>
-        <Button
-          variant="outlined"
-          onClick={handleNext}
-          disabled={result?.done ?? true}
-        >
-          次のページ
-        </Button>
         <Button variant="outlined" onClick={handleCsv}>
           CSV
         </Button>
       </Box>
+      {result?.limitExceeded && (
+        <Alert severity="warning">
+          取得結果が 2,000
+          件で打ち切られました。検索条件を絞り込んで再実行してください。
+        </Alert>
+      )}
       {result && <ResultGrid result={result} />}
     </Stack>
   );

@@ -1,8 +1,8 @@
 {
   "sobjects": [
-    { "name": "Account", "label": "Account", "custom": false },
-    { "name": "Contact", "label": "Contact", "custom": false },
-    { "name": "Opportunity", "label": "Opportunity", "custom": false },
-    { "name": "Invoice__c", "label": "Invoice", "custom": true }
+    { "name": "Account", "label": "Account", "custom": false, "queryable": true },
+    { "name": "Contact", "label": "Contact", "custom": false, "queryable": true },
+    { "name": "Opportunity", "label": "Opportunity", "custom": false, "queryable": true },
+    { "name": "Invoice__c", "label": "Invoice", "custom": true, "queryable": true }
   ]
 }

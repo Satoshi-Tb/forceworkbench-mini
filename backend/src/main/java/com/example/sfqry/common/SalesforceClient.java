@@ -9,8 +9,6 @@ public interface SalesforceClient {
 
     QueryResultDto query(String soql);
 
-    QueryResultDto queryMore(String runId);
-
     String exportCsv(String soql);
 
     DescribeGlobalDto describeGlobal();
