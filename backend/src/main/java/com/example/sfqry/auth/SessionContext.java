@@ -1,9 +1,6 @@
 package com.example.sfqry.auth;
 
-import com.example.sfqry.query.QueryRunState;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
@@ -14,7 +11,6 @@ public class SessionContext implements Serializable {
     private String sessionId;
     private String instanceUrl;
     private UserInfo userInfo;
-    private final Map<String, QueryRunState> queryRuns = new HashMap<>();
 
     public String getSessionId() {
         return sessionId;
@@ -40,14 +36,9 @@ public class SessionContext implements Serializable {
         this.userInfo = userInfo;
     }
 
-    public Map<String, QueryRunState> getQueryRuns() {
-        return queryRuns;
-    }
-
     public void clear() {
         sessionId = null;
         instanceUrl = null;
         userInfo = null;
-        queryRuns.clear();
     }
 }

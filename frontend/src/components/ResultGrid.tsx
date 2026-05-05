@@ -23,6 +23,8 @@ export function ResultGrid({ result }: { result: QueryResult }) {
         rows={rows}
         columns={columns}
         getRowId={(row) => row.__rowId}
+        initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        pageSizeOptions={[25, 50, 100]}
         disableRowSelectionOnClick
       />
     </Box>

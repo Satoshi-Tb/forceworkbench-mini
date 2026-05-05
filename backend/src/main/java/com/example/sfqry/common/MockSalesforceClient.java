@@ -1,11 +1,9 @@
 package com.example.sfqry.common;
 
-import com.example.sfqry.auth.SessionContext;
 import com.example.sfqry.auth.UserInfo;
 import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.query.QueryResultDto;
-import com.example.sfqry.query.QueryRunState;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,17 +25,14 @@ import org.springframework.stereotype.Service;
 public class MockSalesforceClient implements SalesforceClient {
 
     private final ObjectMapper objectMapper;
-    private final SessionContext sessionContext;
     private final byte[] expectedEmail;
     private final byte[] expectedPassword;
 
     public MockSalesforceClient(
             ObjectMapper objectMapper,
-            SessionContext sessionContext,
             @Value("${app.login.email}") String email,
             @Value("${app.login.password}") String password) {
         this.objectMapper = objectMapper;
-        this.sessionContext = sessionContext;
         this.expectedEmail = email.getBytes(StandardCharsets.UTF_8);
         this.expectedPassword = password.getBytes(StandardCharsets.UTF_8);
     }
@@ -64,42 +59,18 @@ public class MockSalesforceClient implements SalesforceClient {
     @Override
     public QueryResultDto query(String soql) {
         String normalized = soql == null ? "" : soql.toLowerCase(Locale.ROOT);
-        if (normalized.contains("from contact")) {
-            return result(null, "mock/query/contact-basic.csv", true);
-        }
-        if (normalized.contains("from invoice__c")) {
-            return result(null, "mock/query/invoice-basic.csv", true);
-        }
-        if (normalized.contains("from opportunity")) {
-            return result(null, "mock/query/opportunity-basic.csv", true);
-        }
-        if (normalized.contains("from account")) {
-            String runId = UUID.randomUUID().toString();
-            sessionContext.getQueryRuns().put(
-                    runId,
-                    new QueryRunState("mock/query/account-page-2.csv", false));
-            return result(runId, "mock/query/account-page-1.csv", false);
-        }
-        throw new ApiException(ApiException.MALFORMED_QUERY, "Unsupported mock SOQL", HttpStatus.BAD_REQUEST);
-    }
-
-    @Override
-    public QueryResultDto queryMore(String runId) {
-        QueryRunState state = sessionContext.getQueryRuns().remove(runId);
-        if (state == null) {
-            throw new ApiException("INVALID_QUERY_RUN", "Query run not found", HttpStatus.NOT_FOUND);
-        }
-        return result(runId, state.nextResource(), true);
+        return result(csvPath(normalized), normalized.contains("from account"));
     }
 
     @Override
     public String exportCsv(String soql) {
-        QueryResultDto result = query(soql);
+        String normalized = soql == null ? "" : soql.toLowerCase(Locale.ROOT);
+        QueryResultDto result = result(csvPath(normalized), false);
         StringBuilder csv = new StringBuilder();
         csv.append(String.join(",", result.columns())).append("\n");
         appendRows(csv, result.columns(), result.rows());
-        if (!result.done() && result.queryRunId() != null) {
-            QueryResultDto next = queryMore(result.queryRunId());
+        if (normalized.contains("from account")) {
+            QueryResultDto next = result("mock/query/account-page-2.csv", false);
             appendRows(csv, next.columns(), next.rows());
         }
         return csv.toString();
@@ -115,9 +86,25 @@ public class MockSalesforceClient implements SalesforceClient {
         return readJson("mock/describe/" + sobject + ".json", DescribeSObjectDto.class);
     }
 
-    private QueryResultDto result(String runId, String path, boolean done) {
+    private QueryResultDto result(String path, boolean limitExceeded) {
         CsvData csv = readCsv(path);
-        return new QueryResultDto(runId, csv.columns(), csv.rows(), done);
+        return new QueryResultDto(csv.columns(), csv.rows(), limitExceeded);
+    }
+
+    private String csvPath(String normalizedSoql) {
+        if (normalizedSoql.contains("from contact")) {
+            return "mock/query/contact-basic.csv";
+        }
+        if (normalizedSoql.contains("from invoice__c")) {
+            return "mock/query/invoice-basic.csv";
+        }
+        if (normalizedSoql.contains("from opportunity")) {
+            return "mock/query/opportunity-basic.csv";
+        }
+        if (normalizedSoql.contains("from account")) {
+            return "mock/query/account-page-1.csv";
+        }
+        throw new ApiException(ApiException.MALFORMED_QUERY, "Unsupported mock SOQL", HttpStatus.BAD_REQUEST);
     }
 
     private <T> T readJson(String path, Class<T> type) {

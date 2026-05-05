@@ -25,11 +25,6 @@ public class QueryService {
         return salesforceClient.query(soql);
     }
 
-    public QueryResultDto queryMore(String runId) {
-        audit.info("QUERY_MORE user={} runId={}", currentEmail(), runId);
-        return salesforceClient.queryMore(runId);
-    }
-
     public String exportCsv(String soql) {
         SoqlQueryGuard.validateSelectQuery(soql);
         audit.info("CSV user={} soql={}", currentEmail(), soql);

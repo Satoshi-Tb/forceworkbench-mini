@@ -1,10 +1,9 @@
 import { apiFetch, ensureOk } from "./client";
 
 export type QueryResult = {
-  queryRunId: string | null;
   columns: string[];
   rows: Record<string, string>[];
-  done: boolean;
+  limitExceeded: boolean;
 };
 
 export async function runQuery(soql: string): Promise<QueryResult> {
@@ -12,12 +11,6 @@ export async function runQuery(soql: string): Promise<QueryResult> {
     method: "POST",
     body: JSON.stringify({ soql }),
   });
-  await ensureOk(res);
-  return res.json();
-}
-
-export async function nextQueryPage(runId: string): Promise<QueryResult> {
-  const res = await apiFetch(`/api/query/runs/${runId}/next`);
   await ensureOk(res);
   return res.json();
 }

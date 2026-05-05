@@ -5,6 +5,7 @@ const sObjectSummarySchema = z.object({
   name: z.string(),
   label: z.string(),
   custom: z.boolean(),
+  queryable: z.boolean(),
 });
 
 const picklistValueSchema = z.object({
