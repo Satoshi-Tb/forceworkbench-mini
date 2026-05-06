@@ -3,9 +3,11 @@ package com.example.sfqry.common;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ErrorAdvice {
@@ -18,6 +20,13 @@ public class ErrorAdvice {
         return ResponseEntity
                 .status(e.getStatus())
                 .body(Map.of("code", e.getCode(), "message", message));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNoResource() {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("code", "NOT_FOUND", "message", "Resource not found"));
     }
 
     @ExceptionHandler(Exception.class)
