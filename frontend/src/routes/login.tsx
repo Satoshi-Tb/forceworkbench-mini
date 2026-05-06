@@ -7,9 +7,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { login } from "../api/auth";
+import { currentUserQueryKey } from "../hooks/useCurrentUser";
 import { rootRoute } from "./__root";
 
 export const loginRoute = createRoute({
@@ -20,6 +22,7 @@ export const loginRoute = createRoute({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +33,8 @@ function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
+      const user = await login(email, password);
+      queryClient.setQueryData(currentUserQueryKey, user);
       await navigate({ to: "/query" });
     } catch {
       setError("ログインに失敗しました");

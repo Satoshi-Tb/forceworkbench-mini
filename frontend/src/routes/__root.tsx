@@ -6,6 +6,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
@@ -13,16 +14,20 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import type { QueryClient } from "@tanstack/react-query";
-import { logout, me } from "../api/auth";
+import { logout } from "../api/auth";
+import {
+  currentUserQueryKey,
+  currentUserQueryOptions,
+  useCurrentUser,
+} from "../hooks/useCurrentUser";
 
 type RouterContext = {
   queryClient: QueryClient;
 };
 
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
-  beforeLoad: async ({ location }) => {
-    const user = await me();
+  beforeLoad: async ({ context, location }) => {
+    const user = await context.queryClient.fetchQuery(currentUserQueryOptions);
     if (location.pathname === "/login") return;
     if (!user) {
       throw redirect({ to: "/login" });
@@ -33,9 +38,12 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: user } = useCurrentUser();
 
   const handleLogout = async () => {
     await logout();
+    queryClient.setQueryData(currentUserQueryKey, null);
     await navigate({ to: "/login" });
   };
 
@@ -46,15 +54,19 @@ function RootLayout() {
           <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
             Force Workbench Mini
           </Typography>
-          <Button component={Link} to="/query" color="inherit">
-            クエリ
-          </Button>
-          <Button component={Link} to="/describe" color="inherit">
-            参照情報
-          </Button>
-          <Button onClick={handleLogout} color="inherit">
-            ログアウト
-          </Button>
+          {user && (
+            <>
+              <Button component={Link} to="/query" color="inherit">
+                クエリ
+              </Button>
+              <Button component={Link} to="/describe" color="inherit">
+                参照情報
+              </Button>
+              <Button onClick={handleLogout} color="inherit">
+                ログアウト
+              </Button>
+            </>
+          )}
         </Toolbar>
       </AppBar>
       <Container
