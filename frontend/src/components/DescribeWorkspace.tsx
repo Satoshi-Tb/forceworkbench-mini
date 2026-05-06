@@ -14,6 +14,7 @@ import {
   type GridColDef,
   type GridRowSelectionModel,
 } from "@mui/x-data-grid";
+import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import type {
   ChildRelationship,
@@ -24,16 +25,26 @@ import type {
 } from "../api/describe";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
 import { useDescribeSObject } from "../hooks/useDescribeSObject";
+import {
+  describeTabAtom,
+  selectedFieldNameAtom,
+  selectedSObjectAtom,
+  type DescribeTab,
+} from "../state/uiStateAtoms";
 import { ObjectPicker } from "./ObjectPicker";
 
-export function DescribeWorkspace({ sobject }: { sobject?: string }) {
+export function DescribeWorkspace() {
+  const selectedSObject = useAtomValue(selectedSObjectAtom);
   const { data: globalData, isLoading: loadingObjects } = useDescribeGlobal();
-  const { data: describe, isLoading: loadingDescribe } =
-    useDescribeSObject(sobject);
-  const [tab, setTab] = useState("overview");
+  const { data: describe, isLoading: loadingDescribe } = useDescribeSObject(
+    selectedSObject ?? undefined,
+  );
+  const [tab, setTab] = useAtom(describeTabAtom);
 
   const objects = globalData?.sobjects ?? [];
-  const selectedSummary = objects.find((object) => object.name === sobject);
+  const selectedSummary = objects.find(
+    (object) => object.name === selectedSObject,
+  );
 
   return (
     <Stack spacing={2}>
@@ -49,16 +60,12 @@ export function DescribeWorkspace({ sobject }: { sobject?: string }) {
         }}
       >
         <Box sx={{ minWidth: 0 }}>
-          <ObjectPicker
-            objects={objects}
-            loading={loadingObjects}
-            selectedObject={sobject}
-          />
+          <ObjectPicker objects={objects} loading={loadingObjects} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <ObjectDetailPanel
             describe={describe}
-            loading={Boolean(sobject) && loadingDescribe}
+            loading={Boolean(selectedSObject) && loadingDescribe}
             selectedSummary={selectedSummary}
             tab={tab}
             onTabChange={setTab}
@@ -79,8 +86,8 @@ function ObjectDetailPanel({
   describe: DescribeSObject | undefined;
   loading: boolean;
   selectedSummary: SObjectSummary | undefined;
-  tab: string;
-  onTabChange: (tab: string) => void;
+  tab: DescribeTab;
+  onTabChange: (tab: DescribeTab) => void;
 }) {
   if (!selectedSummary && !describe) {
     return (
@@ -122,7 +129,10 @@ function ObjectDetailPanel({
         )}
       </Box>
       <Divider />
-      <Tabs value={tab} onChange={(_, value: string) => onTabChange(value)}>
+      <Tabs
+        value={tab}
+        onChange={(_, value: DescribeTab) => onTabChange(value)}
+      >
         <Tab value="overview" label="概要" />
         <Tab value="fields" label="項目" />
         <Tab value="relationships" label="リレーション" />
@@ -218,13 +228,19 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
       })),
     [describe.fields],
   );
-  const [selectedFieldName, setSelectedFieldName] = useState(
-    rows[0]?.name ?? "",
+  const [selectedFieldName, setSelectedFieldName] = useAtom(
+    selectedFieldNameAtom,
   );
 
   useEffect(() => {
-    setSelectedFieldName(rows[0]?.name ?? "");
-  }, [rows]);
+    if (rows.length === 0) {
+      setSelectedFieldName("");
+      return;
+    }
+    if (!rows.some((row) => row.name === selectedFieldName)) {
+      setSelectedFieldName(rows[0].name);
+    }
+  }, [rows, selectedFieldName, setSelectedFieldName]);
 
   const selectedField = rows.find((field) => field.name === selectedFieldName);
   const rowSelectionModel = useMemo<GridRowSelectionModel>(

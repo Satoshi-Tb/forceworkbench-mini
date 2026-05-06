@@ -7,19 +7,20 @@ import {
   Typography,
 } from "@mui/material";
 import { createRoute } from "@tanstack/react-router";
+import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { downloadCsv, type QueryResult } from "../api/query";
+import { downloadCsv } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
 import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
 import { useDescribeSObject } from "../hooks/useDescribeSObject";
 import { useRunSoql } from "../hooks/useRunSoql";
 import {
-  buildSoql,
-  createInitialQueryBuilderState,
-  type QueryBuilderState,
-} from "../utils/soqlBuilder";
+  builderStateAtom,
+  manualSoqlOverrideAtom,
+} from "../state/uiStateAtoms";
+import { buildSoql, type QueryBuilderState } from "../utils/soqlBuilder";
 import { rootRoute } from "./__root";
 
 export const queryRoute = createRoute({
@@ -29,14 +30,11 @@ export const queryRoute = createRoute({
 });
 
 function QueryPage() {
-  const [builderState, setBuilderState] = useState<QueryBuilderState>(() =>
-    createInitialQueryBuilderState(),
+  const [builderState, setBuilderState] = useAtom(builderStateAtom);
+  const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
+    manualSoqlOverrideAtom,
   );
-  const [manualSoqlOverride, setManualSoqlOverride] = useState<string | null>(
-    "SELECT Id, Name FROM Account LIMIT 10",
-  );
-  const [result, setResult] = useState<QueryResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
   const runSoql = useRunSoql();
   const {
     data: globalData,
@@ -60,6 +58,13 @@ function QueryPage() {
     [builderState, describe?.fields],
   );
   const soql = manualSoqlOverride ?? derivedSoql;
+  const result = runSoql.data ?? null;
+  const queryError = runSoql.error
+    ? runSoql.error instanceof ApiError
+      ? runSoql.error.message
+      : "SOQL実行に失敗しました"
+    : null;
+  const error = csvError ?? queryError;
 
   const handleBuilderChange = (next: QueryBuilderState) => {
     setBuilderState(next);
@@ -67,19 +72,17 @@ function QueryPage() {
   };
 
   const handleRun = async () => {
-    setError(null);
-    setResult(null);
+    setCsvError(null);
+    runSoql.reset();
     try {
-      const next = await runSoql.mutateAsync(soql);
-      setResult(next);
-    } catch (e) {
-      setResult(null);
-      setError(e instanceof ApiError ? e.message : "SOQL実行に失敗しました");
+      await runSoql.mutateAsync(soql);
+    } catch {
+      // mutation の error を画面表示に使うため、ここでは追加処理しない。
     }
   };
 
   const handleCsv = async () => {
-    setError(null);
+    setCsvError(null);
     try {
       const blob = await downloadCsv(soql);
       const url = URL.createObjectURL(blob);
@@ -89,7 +92,7 @@ function QueryPage() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(
+      setCsvError(
         e instanceof ApiError ? e.message : "CSVダウンロードに失敗しました",
       );
     }
