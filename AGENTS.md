@@ -57,7 +57,8 @@
 
 **バックエンド:**
 
-- ビルド/既存テスト確認: `.\mvnw.cmd -B test`
+- ビルド/既存テスト確認: `.\mvnw.cmd -B clean test`
+- パッケージング確認が必要な場合: `.\mvnw.cmd -B clean -DskipTests package`
 - 新規テストコード: 現状は作成しない。明示依頼がある場合のみ追加する
 
 **E2Eテスト:**

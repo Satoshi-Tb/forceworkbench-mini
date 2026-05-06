@@ -59,12 +59,22 @@ public class MockSalesforceClient implements SalesforceClient {
     @Override
     public QueryResultDto query(String soql) {
         String normalized = soql == null ? "" : soql.toLowerCase(Locale.ROOT);
+        if (isCountOnlyQuery(normalized)) {
+            return countResult(normalized);
+        }
         return result(csvPath(normalized), normalized.contains("from account"));
     }
 
     @Override
     public String exportCsv(String soql) {
         String normalized = soql == null ? "" : soql.toLowerCase(Locale.ROOT);
+        if (isCountOnlyQuery(normalized)) {
+            QueryResultDto result = countResult(normalized);
+            StringBuilder csv = new StringBuilder();
+            csv.append(String.join(",", result.columns())).append("\n");
+            appendRows(csv, result.columns(), result.rows());
+            return csv.toString();
+        }
         QueryResultDto result = result(csvPath(normalized), false);
         StringBuilder csv = new StringBuilder();
         csv.append(String.join(",", result.columns())).append("\n");
@@ -89,6 +99,25 @@ public class MockSalesforceClient implements SalesforceClient {
     private QueryResultDto result(String path, boolean limitExceeded) {
         CsvData csv = readCsv(path);
         return new QueryResultDto(csv.columns(), csv.rows(), limitExceeded);
+    }
+
+    private QueryResultDto countResult(String normalizedSoql) {
+        return new QueryResultDto(
+                List.of("COUNT()"),
+                List.of(Map.of("COUNT()", String.valueOf(countRows(normalizedSoql)))),
+                false);
+    }
+
+    private int countRows(String normalizedSoql) {
+        if (normalizedSoql.contains("from account")) {
+            return readCsv("mock/query/account-page-1.csv").rows().size()
+                    + readCsv("mock/query/account-page-2.csv").rows().size();
+        }
+        return readCsv(csvPath(normalizedSoql)).rows().size();
+    }
+
+    private boolean isCountOnlyQuery(String normalizedSoql) {
+        return normalizedSoql.matches("^\\s*select\\s+count\\s*\\(\\s*\\)\\s+from\\b[\\s\\S]*$");
     }
 
     private String csvPath(String normalizedSoql) {
