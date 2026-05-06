@@ -71,7 +71,7 @@ function QueryPage() {
     setResult(null);
     try {
       const next = await runSoql.mutateAsync(soql);
-      setResult(withFallbackColumns(next, soql));
+      setResult(next);
     } catch (e) {
       setResult(null);
       setError(e instanceof ApiError ? e.message : "SOQL実行に失敗しました");
@@ -141,24 +141,12 @@ function QueryPage() {
           件で打ち切られました。検索条件を絞り込んで再実行してください。
         </Alert>
       )}
-      {result && <ResultGrid result={result} />}
+      {result &&
+        (result.rows.length > 0 ? (
+          <ResultGrid result={result} />
+        ) : (
+          <Typography>検索結果は0件です</Typography>
+        ))}
     </Stack>
   );
-}
-
-function withFallbackColumns(result: QueryResult, soql: string): QueryResult {
-  if (result.columns.length > 0 || result.rows.length > 0) return result;
-  // Salesforce の query 結果が 0 件の場合、レスポンスだけでは列情報を復元できない。
-  // DataGrid が "No columns" ではなく "No rows" を表示できるよう、SELECT 句から列名を補完する。
-  const columns = extractSelectedColumns(soql);
-  return columns.length > 0 ? { ...result, columns } : result;
-}
-
-function extractSelectedColumns(soql: string): string[] {
-  const match = soql.match(/^\s*select\s+([\s\S]+?)\s+from\s+/i);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((column) => column.trim())
-    .filter((column) => column);
 }

@@ -21,11 +21,21 @@ import {
 } from "@mui/material";
 import type { DescribeSObject, Field, SObjectSummary } from "../api/describe";
 import {
+  FIELDS_ALL_SELECT_FIELD,
+  canSelectField,
+  isSpecialSelectField,
   queryOperators,
+  specialSelectFields,
   type QueryBuilderState,
   type QueryCondition,
   type QueryOrder,
 } from "../utils/soqlBuilder";
+
+type SelectFieldOption = {
+  name: string;
+  label: string;
+  special?: boolean;
+};
 
 type SoqlQueryBuilderProps = {
   state: QueryBuilderState;
@@ -47,13 +57,24 @@ export function SoqlQueryBuilder({
   const selectedObject =
     objects.find((object) => object.name === state.objectName) ?? null;
   const fields = describe?.fields ?? [];
+  const selectFieldOptions: SelectFieldOption[] = [
+    ...specialSelectFields.map((fieldName) => ({
+      name: fieldName,
+      label: fieldName,
+      special: true,
+    })),
+    ...fields,
+  ];
   const selectedFields = state.fields
-    .map((fieldName) => fields.find((field) => field.name === fieldName))
-    .filter((field): field is Field => Boolean(field));
+    .map((fieldName) =>
+      selectFieldOptions.find((field) => field.name === fieldName),
+    )
+    .filter((field): field is SelectFieldOption => Boolean(field));
   const sortableFields = fields.filter((field) => field.sortable);
   const filterableFields = fields.filter((field) => field.filterable);
   const fieldsDisabled = !state.objectName || describeLoading || !describe;
   const limitInvalid = state.limit !== "" && !/^[1-9]\d*$/.test(state.limit);
+  const fieldsAllSelected = state.fields.includes(FIELDS_ALL_SELECT_FIELD);
 
   const updateCondition = (id: string, patch: Partial<QueryCondition>) => {
     onChange({
@@ -139,25 +160,37 @@ export function SoqlQueryBuilder({
             <Autocomplete
               multiple
               disableCloseOnSelect
-              options={fields}
+              options={selectFieldOptions}
               value={selectedFields}
               disabled={fieldsDisabled}
-              getOptionLabel={(option) => `${option.label} (${option.name})`}
+              getOptionLabel={formatSelectFieldLabel}
               isOptionEqualToValue={(option, value) =>
                 option.name === value.name
               }
-              onChange={(_, nextFields) =>
+              getOptionDisabled={(option) =>
+                !state.fields.includes(option.name) &&
+                !canSelectField(state.fields, option.name)
+              }
+              onChange={(_, nextFields) => {
+                const fieldNames = nextFields.map((field) => field.name);
+                const specialFieldName = fieldNames.find(isSpecialSelectField);
+                const nextSelectedFields = specialFieldName
+                  ? [specialFieldName]
+                  : fieldNames;
                 onChange({
                   ...state,
-                  fields: nextFields.map((field) => field.name),
-                })
-              }
+                  fields: nextSelectedFields,
+                  limit: nextSelectedFields.includes(FIELDS_ALL_SELECT_FIELD)
+                    ? limitFieldsAll(state.limit)
+                    : state.limit,
+                });
+              }}
               renderOption={(props, option, { selected }) => (
                 <li {...props}>
                   <Checkbox checked={selected} />
                   <ListItemText
                     primary={option.label}
-                    secondary={option.name}
+                    secondary={option.special ? undefined : option.name}
                   />
                 </li>
               )}
@@ -177,7 +210,12 @@ export function SoqlQueryBuilder({
               helperText={limitInvalid ? "正の整数のみ有効です" : " "}
               sx={{ width: { xs: "100%", sm: 160 } }}
               onChange={(event) =>
-                onChange({ ...state, limit: event.target.value })
+                onChange({
+                  ...state,
+                  limit: fieldsAllSelected
+                    ? limitFieldsAll(event.target.value)
+                    : event.target.value,
+                })
               }
             />
           </Stack>
@@ -281,6 +319,14 @@ export function SoqlQueryBuilder({
       </Stack>
     </Paper>
   );
+}
+
+function formatSelectFieldLabel(option: SelectFieldOption): string {
+  return option.special ? option.name : `${option.label} (${option.name})`;
+}
+
+function limitFieldsAll(limit: string): string {
+  return /^[1-9]\d*$/.test(limit) && Number(limit) <= 200 ? limit : "200";
 }
 
 function SortOrderRow({

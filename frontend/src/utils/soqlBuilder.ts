@@ -38,6 +38,34 @@ export const queryOperators = [
   "EXCLUDES",
 ] as const;
 
+export const COUNT_SELECT_FIELD = "COUNT()";
+export const FIELDS_ALL_SELECT_FIELD = "FIELDS(ALL)";
+export const specialSelectFields = [
+  COUNT_SELECT_FIELD,
+  FIELDS_ALL_SELECT_FIELD,
+] as const;
+
+export type SpecialSelectField = (typeof specialSelectFields)[number];
+
+export function isSpecialSelectField(
+  fieldName: string,
+): fieldName is SpecialSelectField {
+  return specialSelectFields.includes(fieldName as SpecialSelectField);
+}
+
+export function hasSpecialSelectField(fieldNames: string[]): boolean {
+  return fieldNames.some(isSpecialSelectField);
+}
+
+export function canSelectField(
+  selectedFieldNames: string[],
+  candidateFieldName: string,
+): boolean {
+  if (selectedFieldNames.length === 0) return true;
+  if (isSpecialSelectField(candidateFieldName)) return false;
+  return !hasSpecialSelectField(selectedFieldNames);
+}
+
 export function createInitialQueryBuilderState(): QueryBuilderState {
   return {
     objectName: "",

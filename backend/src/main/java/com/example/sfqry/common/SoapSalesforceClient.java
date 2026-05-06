@@ -126,6 +126,9 @@ public class SoapSalesforceClient implements SalesforceClient {
             PartnerConnection conn = queryConnection();
             StringBuilder csv = new StringBuilder();
             QueryResult qr = conn.query(soql);
+            if (isEmptyRecords(qr.getRecords())) {
+                return "件数結果[" + qr.getSize() + "]件";
+            }
             List<String> columns = extractColumns(qr.getRecords());
             csv.append(String.join(",", columns)).append("\n");
             appendRows(csv, columns, qr.getRecords());
@@ -259,12 +262,30 @@ public class SoapSalesforceClient implements SalesforceClient {
     }
 
     private QueryResultDto convertResult(QueryResult qr) {
-        List<String> columns = extractColumns(qr.getRecords());
+        SObject[] records = qr.getRecords();
+        if (isEmptyRecords(records)) {
+            // records が返らず size だけが正の場合は count() 相当の結果として扱う。
+            return qr.getSize() == 0
+                    ? new QueryResultDto(List.of(), List.of(), false)
+                    : countResult(qr);
+        }
+        List<String> columns = extractColumns(records);
         List<Map<String, String>> rows = new ArrayList<>();
-        for (SObject record : qr.getRecords()) {
+        for (SObject record : records) {
             rows.add(toRow(record, columns));
         }
         return new QueryResultDto(columns, rows, !qr.isDone());
+    }
+
+    private QueryResultDto countResult(QueryResult qr) {
+        return new QueryResultDto(
+                List.of("COUNT()"),
+                List.of(Map.of("COUNT()", String.valueOf(qr.getSize()))),
+                false);
+    }
+
+    private boolean isEmptyRecords(SObject[] records) {
+        return records == null || records.length == 0;
     }
 
     private List<String> extractColumns(SObject[] records) {
