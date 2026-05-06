@@ -8,7 +8,6 @@ import { indexRoute } from "./routes";
 import { loginRoute } from "./routes/login";
 import { queryRoute } from "./routes/query";
 import { describeRoute } from "./routes/describe";
-import { describeSObjectRoute } from "./routes/describe/$sobject";
 import { theme } from "./theme";
 
 const queryClient = new QueryClient();
@@ -18,7 +17,6 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   queryRoute,
   describeRoute,
-  describeSObjectRoute,
 ]);
 
 const router = createRouter({

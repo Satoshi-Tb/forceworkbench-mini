@@ -14,6 +14,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
+import { Provider } from "jotai";
 import { logout } from "../api/auth";
 import {
   currentUserQueryKey,
@@ -73,7 +74,9 @@ function RootLayout() {
         maxWidth={false}
         sx={{ maxWidth: 1680, mx: "auto", px: 4, py: 3 }}
       >
-        <Outlet />
+        <Provider key={user?.userId ?? "anonymous"}>
+          <Outlet />
+        </Provider>
       </Container>
     </Box>
   );

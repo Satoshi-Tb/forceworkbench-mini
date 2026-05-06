@@ -10,20 +10,24 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "@tanstack/react-router";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import type { SObjectSummary } from "../api/describe";
+import {
+  selectedFieldNameAtom,
+  selectedSObjectAtom,
+} from "../state/uiStateAtoms";
 
 export function ObjectPicker({
   objects,
   loading,
-  selectedObject,
 }: {
   objects: SObjectSummary[];
   loading: boolean;
-  selectedObject?: string;
 }) {
-  const navigate = useNavigate();
+  const selectedObject = useAtomValue(selectedSObjectAtom);
+  const setSelectedObject = useSetAtom(selectedSObjectAtom);
+  const setSelectedFieldName = useSetAtom(selectedFieldNameAtom);
   const [query, setQuery] = useState("");
 
   const filteredObjects = useMemo(() => {
@@ -67,24 +71,20 @@ export function ObjectPicker({
           title="カスタムオブジェクト"
           objects={customObjects}
           selectedObject={selectedObject}
-          onSelect={(object) =>
-            navigate({
-              to: "/describe/$sobject",
-              params: { sobject: object.name },
-            })
-          }
+          onSelect={(object) => {
+            setSelectedObject(object.name);
+            setSelectedFieldName("");
+          }}
         />
         <Divider />
         <ObjectSection
           title="標準オブジェクト"
           objects={standardObjects}
           selectedObject={selectedObject}
-          onSelect={(object) =>
-            navigate({
-              to: "/describe/$sobject",
-              params: { sobject: object.name },
-            })
-          }
+          onSelect={(object) => {
+            setSelectedObject(object.name);
+            setSelectedFieldName("");
+          }}
         />
       </Box>
     </Paper>
@@ -99,7 +99,7 @@ function ObjectSection({
 }: {
   title: string;
   objects: SObjectSummary[];
-  selectedObject?: string;
+  selectedObject: string | null;
   onSelect: (object: SObjectSummary) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
