@@ -6,7 +6,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
@@ -16,12 +16,11 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Provider } from "jotai";
-import { logout } from "../api/auth";
 import {
-  currentUserQueryKey,
   currentUserQueryOptions,
   useCurrentUser,
 } from "../hooks/useCurrentUser";
+import { useLogout } from "../hooks/useLogout";
 
 type RouterContext = {
   queryClient: QueryClient;
@@ -43,15 +42,17 @@ function RootLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
+  const logoutMutation = useLogout();
   const queryActive = pathname.startsWith("/query");
   const describeActive = pathname.startsWith("/describe");
 
-  const handleLogout = async () => {
-    await logout();
-    queryClient.setQueryData(currentUserQueryKey, null);
-    await navigate({ to: "/login" });
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        void navigate({ to: "/login" });
+      },
+    });
   };
 
   return (

@@ -1,10 +1,13 @@
-import { apiFetch, ensureOk } from "./client";
+import { z } from "zod";
+import { apiFetch, ensureOk, parseApiResponse } from "./client";
 
-export type QueryResult = {
-  columns: string[];
-  rows: Record<string, string>[];
-  limitExceeded: boolean;
-};
+const queryResultSchema = z.object({
+  columns: z.array(z.string()),
+  rows: z.array(z.record(z.string(), z.string())),
+  limitExceeded: z.boolean(),
+});
+
+export type QueryResult = z.infer<typeof queryResultSchema>;
 
 export type CsvEncoding = "utf-8" | "shift_jis";
 
@@ -14,7 +17,8 @@ export async function runQuery(soql: string): Promise<QueryResult> {
     body: JSON.stringify({ soql }),
   });
   await ensureOk(res);
-  return res.json();
+  const body: unknown = await res.json();
+  return parseApiResponse(queryResultSchema, body);
 }
 
 export async function downloadCsv(

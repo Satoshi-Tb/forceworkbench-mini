@@ -1,11 +1,14 @@
-import { apiFetch, ensureOk } from "./client";
+import { z } from "zod";
+import { apiFetch, ensureOk, parseApiResponse } from "./client";
 
-export type UserInfo = {
-  email: string;
-  name: string;
-  organizationId: string;
-  userId: string;
-};
+const userInfoSchema = z.object({
+  email: z.string(),
+  name: z.string(),
+  organizationId: z.string(),
+  userId: z.string(),
+});
+
+export type UserInfo = z.infer<typeof userInfoSchema>;
 
 export async function login(
   email: string,
@@ -16,7 +19,8 @@ export async function login(
     body: JSON.stringify({ email, password }),
   });
   await ensureOk(res);
-  return res.json();
+  const body: unknown = await res.json();
+  return parseApiResponse(userInfoSchema, body);
 }
 
 export async function logout(): Promise<void> {
@@ -28,5 +32,6 @@ export async function me(): Promise<UserInfo | null> {
   const res = await apiFetch("/api/me");
   if (res.status === 401) return null;
   await ensureOk(res);
-  return res.json();
+  const body: unknown = await res.json();
+  return parseApiResponse(userInfoSchema, body);
 }

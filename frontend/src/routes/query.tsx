@@ -13,12 +13,12 @@ import {
 import { createRoute } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
-import { ApiError } from "../api/client";
-import { downloadCsv, type CsvEncoding } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
 import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
+import { getApiErrorMessage } from "../hooks/apiErrorMessage";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
 import { useDescribeSObject } from "../hooks/useDescribeSObject";
+import { useExportCsv, type CsvEncoding } from "../hooks/useExportCsv";
 import { useRunSoql } from "../hooks/useRunSoql";
 import {
   builderStateAtom,
@@ -39,8 +39,8 @@ function QueryPage() {
     manualSoqlOverrideAtom,
   );
   const [csvEncoding, setCsvEncoding] = useState<CsvEncoding>("shift_jis");
-  const [csvError, setCsvError] = useState<string | null>(null);
   const runSoql = useRunSoql();
+  const exportCsv = useExportCsv();
   const {
     data: globalData,
     isLoading: objectsLoading,
@@ -65,9 +65,10 @@ function QueryPage() {
   const soql = manualSoqlOverride ?? derivedSoql;
   const result = runSoql.data ?? null;
   const queryError = runSoql.error
-    ? runSoql.error instanceof ApiError
-      ? runSoql.error.message
-      : "SOQL実行に失敗しました"
+    ? getApiErrorMessage(runSoql.error, "SOQL実行に失敗しました")
+    : null;
+  const csvError = exportCsv.error
+    ? getApiErrorMessage(exportCsv.error, "CSVダウンロードに失敗しました")
     : null;
   const error = csvError ?? queryError;
 
@@ -76,31 +77,19 @@ function QueryPage() {
     setManualSoqlOverride(null);
   };
 
-  const handleRun = async () => {
-    setCsvError(null);
+  const handleRun = () => {
+    exportCsv.reset();
     runSoql.reset();
-    try {
-      await runSoql.mutateAsync(soql);
-    } catch {
-      // mutation の error を画面表示に使うため、ここでは追加処理しない。
-    }
+    runSoql.mutate(soql);
   };
 
-  const handleCsv = async () => {
-    setCsvError(null);
-    try {
-      const blob = await downloadCsv(soql, csvEncoding);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `query_${formatJstTimestamp(new Date())}.csv`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setCsvError(
-        e instanceof ApiError ? e.message : "CSVダウンロードに失敗しました",
-      );
-    }
+  const handleCsv = () => {
+    exportCsv.reset();
+    exportCsv.mutate({
+      soql,
+      encoding: csvEncoding,
+      filename: `query_${formatJstTimestamp(new Date())}.csv`,
+    });
   };
 
   return (
@@ -139,7 +128,11 @@ function QueryPage() {
         >
           実行
         </Button>
-        <Button variant="outlined" onClick={handleCsv}>
+        <Button
+          variant="outlined"
+          onClick={handleCsv}
+          disabled={exportCsv.isPending}
+        >
           CSV
         </Button>
         <FormControl size="small" sx={{ minWidth: 150 }}>
