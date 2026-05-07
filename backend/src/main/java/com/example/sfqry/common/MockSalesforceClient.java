@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class MockSalesforceClient implements SalesforceClient {
 
+    private static final String CSV_LINE_SEPARATOR = "\r\n";
+
     private final ObjectMapper objectMapper;
     private final byte[] expectedEmail;
     private final byte[] expectedPassword;
@@ -71,13 +73,13 @@ public class MockSalesforceClient implements SalesforceClient {
         if (isCountOnlyQuery(normalized)) {
             QueryResultDto result = countResult(normalized);
             StringBuilder csv = new StringBuilder();
-            csv.append(String.join(",", result.columns())).append("\n");
+            csv.append(String.join(",", result.columns())).append(CSV_LINE_SEPARATOR);
             appendRows(csv, result.columns(), result.rows());
             return csv.toString();
         }
         QueryResultDto result = result(csvPath(normalized), false);
         StringBuilder csv = new StringBuilder();
-        csv.append(String.join(",", result.columns())).append("\n");
+        csv.append(String.join(",", result.columns())).append(CSV_LINE_SEPARATOR);
         appendRows(csv, result.columns(), result.rows());
         if (normalized.contains("from account")) {
             QueryResultDto next = result("mock/query/account-page-2.csv", false);
@@ -172,7 +174,7 @@ public class MockSalesforceClient implements SalesforceClient {
             List<Map<String, String>> rows) {
         for (Map<String, String> row : rows) {
             List<String> values = columns.stream().map(row::get).toList();
-            csv.append(String.join(",", values)).append("\n");
+            csv.append(String.join(",", values)).append(CSV_LINE_SEPARATOR);
         }
     }
 

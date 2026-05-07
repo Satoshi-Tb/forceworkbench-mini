@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,10 +25,13 @@ public class QueryController {
     }
 
     @PostMapping("/csv")
-    public ResponseEntity<String> csv(@RequestBody QueryRequestDto request) {
+    public ResponseEntity<byte[]> csv(
+            @RequestBody QueryRequestDto request,
+            @RequestParam(name = "encoding", required = false) String encodingValue) {
+        CsvEncoding encoding = CsvEncoding.fromRequestValue(encodingValue);
         return ResponseEntity.ok()
-                .contentType(new MediaType("text", "csv"))
+                .contentType(new MediaType("text", "csv", encoding.charset()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"query.csv\"")
-                .body(queryService.exportCsv(request.soql()));
+                .body(queryService.exportCsv(request.soql()).getBytes(encoding.charset()));
     }
 }

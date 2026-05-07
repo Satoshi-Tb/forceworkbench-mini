@@ -2,6 +2,10 @@ import {
   Alert,
   Box,
   Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -10,7 +14,7 @@ import { createRoute } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { downloadCsv } from "../api/query";
+import { downloadCsv, type CsvEncoding } from "../api/query";
 import { ResultGrid } from "../components/ResultGrid";
 import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
 import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
@@ -34,6 +38,7 @@ function QueryPage() {
   const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
     manualSoqlOverrideAtom,
   );
+  const [csvEncoding, setCsvEncoding] = useState<CsvEncoding>("shift_jis");
   const [csvError, setCsvError] = useState<string | null>(null);
   const runSoql = useRunSoql();
   const {
@@ -84,11 +89,11 @@ function QueryPage() {
   const handleCsv = async () => {
     setCsvError(null);
     try {
-      const blob = await downloadCsv(soql);
+      const blob = await downloadCsv(soql, csvEncoding);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "query.csv";
+      anchor.download = `query_${formatJstTimestamp(new Date())}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -126,7 +131,7 @@ function QueryPage() {
         minRows={4}
         fullWidth
       />
-      <Box sx={{ display: "flex", gap: 1 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
         <Button
           variant="contained"
           onClick={handleRun}
@@ -137,6 +142,20 @@ function QueryPage() {
         <Button variant="outlined" onClick={handleCsv}>
           CSV
         </Button>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel id="csv-encoding-label">CSV文字コード</InputLabel>
+          <Select
+            labelId="csv-encoding-label"
+            value={csvEncoding}
+            label="CSV文字コード"
+            onChange={(event) =>
+              setCsvEncoding(event.target.value as CsvEncoding)
+            }
+          >
+            <MenuItem value="utf-8">UTF-8</MenuItem>
+            <MenuItem value="shift_jis">Shift_JIS</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
       {result?.limitExceeded && (
         <Alert severity="warning">
@@ -152,4 +171,21 @@ function QueryPage() {
         ))}
     </Stack>
   );
+}
+
+function formatJstTimestamp(date: Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .filter((part) => part.type !== "literal")
+    .map((part) => part.value)
+    .join("");
 }
