@@ -4,6 +4,17 @@ Salesforce 照会ツール (MySQL Workbench 風)。Java Spring Boot + React で�
 
 詳細な移植計画は `docs/migration-plan/` を参照。
 
+## 公開範囲・利用について
+
+- このリポジトリは**個人開発用途**を想定しています。
+
+> **注意: mock プロファイルのままインターネット公開しないこと**
+>
+> `SPRING_PROFILES_ACTIVE=mock` のままデプロイすると、`APP_LOGIN_EMAIL` / `APP_LOGIN_PASSWORD`
+> 未設定時はデフォルト資格情報でログインできる状態になります。
+> 公開エンドポイントにデプロイする場合は必ずこれらの環境変数を上書きしてください。
+> デプロイ手順は `docs/deployment/demo-deploy.md` を参照してください。
+
 ## 起動 (開発時)
 
 backend (Spring Boot, port 8080):
