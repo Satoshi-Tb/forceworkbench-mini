@@ -271,11 +271,20 @@ cloudflared tunnel --url http://localhost:8080
 Salesforce 接続情報が不要なモック版 (`SPRING_PROFILES_ACTIVE=mock`) でデプロイする手順。
 デモデータが固定のため、SF 組織の準備ゼロで起動できる。
 
+### ⚠️ 注意: ログイン資格情報を必ず上書きすること
+
+`APP_LOGIN_EMAIL` / `APP_LOGIN_PASSWORD` を設定しないと、デフォルトの `test@example.com` / `test` で誰でもログインできる状態になる。
+公開エンドポイントにデプロイする場合は必ず以下の手順でシークレットを登録し、`--set-secrets` で注入すること。
+
 ### 案 A との差分 (Cloud Run)
 
-§4.3 手順 3 (シークレット登録) を **丸ごとスキップ**し、手順 5 の `gcloud run deploy` を以下に置き換える。
+§4.3 手順 3 のシークレット登録を **APP_LOGIN_EMAIL / APP_LOGIN_PASSWORD のみ**実施し、手順 5 の `gcloud run deploy` を以下に置き換える。
 
 ```bash
+# シークレット登録 (SF 接続情報は不要。ログイン資格情報のみ)
+printf '%s' 'demo-user@example.com' | gcloud secrets create APP_LOGIN_EMAIL --data-file=-
+printf '%s' '<secure-password>'     | gcloud secrets create APP_LOGIN_PASSWORD --data-file=-
+
 gcloud run deploy sfqry \
   --image asia-northeast1-docker.pkg.dev/sfqry-demo/sfqry/app:latest \
   --region asia-northeast1 \
@@ -287,18 +296,20 @@ gcloud run deploy sfqry \
   --timeout 300 \
   --min-instances 0 \
   --max-instances 1 \
-  --set-env-vars SPRING_PROFILES_ACTIVE=mock
+  --set-env-vars SPRING_PROFILES_ACTIVE=mock \
+  --set-secrets APP_LOGIN_EMAIL=APP_LOGIN_EMAIL:latest,APP_LOGIN_PASSWORD=APP_LOGIN_PASSWORD:latest
 ```
-
-`--set-secrets` の行は不要。モック用の固定 email/password はコード内に定義済みのため Secret Manager も使わない。
 
 ### 案 B との差分 (ローカル + Cloudflare Tunnel)
 
-起動コマンドの環境変数を変えるだけ。`.env` も SF 接続情報も不要。
+SF 接続情報は不要。ログイン資格情報を環境変数で上書きしてから起動する。
 
 ```bash
-# Spring Boot 起動
-SPRING_PROFILES_ACTIVE=mock ./mvnw spring-boot:run
+# Spring Boot 起動 (APP_LOGIN_EMAIL / APP_LOGIN_PASSWORD を必ず設定すること)
+$env:SPRING_PROFILES_ACTIVE="mock"
+$env:APP_LOGIN_EMAIL="demo-user@example.com"
+$env:APP_LOGIN_PASSWORD="<secure-password>"
+./mvnw spring-boot:run
 
 # 別シェル (Quick Tunnel の場合)
 cloudflared tunnel --url http://localhost:8080
@@ -306,11 +317,12 @@ cloudflared tunnel --url http://localhost:8080
 
 ### 後始末
 
-案 A の場合、§7 の Cloud Run 後始末から **シークレット削除の行を省く**だけで手順は同じ。
+案 A の場合、§7 の Cloud Run 後始末から SF 関連シークレットの削除行を省き、ログイン資格情報シークレットを削除する。
 
 ```bash
 gcloud run services delete sfqry --region asia-northeast1
-# gcloud secrets delete ... は不要 (作成していないため)
+gcloud secrets delete APP_LOGIN_EMAIL
+gcloud secrets delete APP_LOGIN_PASSWORD
 gcloud artifacts repositories delete sfqry --location asia-northeast1
 ```
 
