@@ -44,6 +44,7 @@ public class SoapSalesforceClient implements SalesforceClient {
 
     private static final Logger log = LoggerFactory.getLogger(SoapSalesforceClient.class);
     private static final int QUERY_PAGE_LIMIT = 2000;
+    private static final String CSV_LINE_SEPARATOR = "\r\n";
 
     private final SalesforceProperties props;
     private final PartnerConnectionFactory connectionFactory;
@@ -130,7 +131,7 @@ public class SoapSalesforceClient implements SalesforceClient {
                 return "件数結果[" + qr.getSize() + "]件";
             }
             List<String> columns = extractColumns(qr.getRecords());
-            csv.append(String.join(",", columns)).append("\n");
+            csv.append(String.join(",", columns)).append(CSV_LINE_SEPARATOR);
             appendRows(csv, columns, qr.getRecords());
             while (!qr.isDone()) {
                 qr = conn.queryMore(qr.getQueryLocator());
@@ -332,7 +333,7 @@ public class SoapSalesforceClient implements SalesforceClient {
         for (SObject record : records) {
             Map<String, String> row = toRow(record, columns);
             List<String> values = columns.stream().map(row::get).toList();
-            csv.append(String.join(",", values)).append("\n");
+            csv.append(String.join(",", values)).append(CSV_LINE_SEPARATOR);
         }
     }
 
