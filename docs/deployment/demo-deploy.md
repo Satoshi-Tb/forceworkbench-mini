@@ -52,7 +52,10 @@ Salesforce 照会ツール (SOQL Query / describe) を Integration User 経由�
    server.port=${PORT:8080}
    ```
 
-2. **本番プロファイル `application-prod.properties` を追加**
+2. **本番プロファイル `application-prod.properties` を追加** (SF 接続の本番デプロイを行う場合のみ)
+   mock プロファイルで Cloud Run にデプロイする場合はこのファイルは不要。
+   `server.forward-headers-strategy=native` は `application.properties` に追加済みのため全プロファイルで有効。
+   `COOKIE_SECURE=true` はデプロイコマンドの `--set-env-vars` で渡す。
    ```properties
    server.servlet.session.cookie.secure=true
    server.servlet.session.cookie.same-site=lax
@@ -296,7 +299,7 @@ gcloud run deploy sfqry \
   --timeout 300 \
   --min-instances 0 \
   --max-instances 1 \
-  --set-env-vars SPRING_PROFILES_ACTIVE=mock \
+  --set-env-vars SPRING_PROFILES_ACTIVE=mock,COOKIE_SECURE=true \
   --set-secrets APP_LOGIN_EMAIL=APP_LOGIN_EMAIL:latest,APP_LOGIN_PASSWORD=APP_LOGIN_PASSWORD:latest
 ```
 
