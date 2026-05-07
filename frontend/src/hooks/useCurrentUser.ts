@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { me } from "../api/auth";
-
-export const currentUserQueryKey = ["auth", "me"] as const;
+import { queryKeys } from "./queryKeys";
 
 export const currentUserQueryOptions = {
-  queryKey: currentUserQueryKey,
+  queryKey: queryKeys.auth.me,
   queryFn: me,
 };
 

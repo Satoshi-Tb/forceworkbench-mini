@@ -7,11 +7,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useQueryClient } from "@tanstack/react-query";
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { login } from "../api/auth";
-import { currentUserQueryKey } from "../hooks/useCurrentUser";
+import { useLogin } from "../hooks/useLogin";
 import { rootRoute } from "./__root";
 
 export const loginRoute = createRoute({
@@ -22,25 +20,21 @@ export const loginRoute = createRoute({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const loginMutation = useLogin();
+  const error = loginMutation.error ? "ログインに失敗しました" : null;
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const user = await login(email, password);
-      queryClient.setQueryData(currentUserQueryKey, user);
-      await navigate({ to: "/query" });
-    } catch {
-      setError("ログインに失敗しました");
-    } finally {
-      setLoading(false);
-    }
+    loginMutation.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          void navigate({ to: "/query" });
+        },
+      },
+    );
   };
 
   return (
@@ -67,7 +61,11 @@ function LoginPage() {
             required
             fullWidth
           />
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loginMutation.isPending}
+          >
             ログイン
           </Button>
         </Stack>
