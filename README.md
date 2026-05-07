@@ -34,6 +34,23 @@ npm run dev
 
 ブラウザで `http://localhost:5173` を開く。`/api/*` は Vite proxy で 8080 に転送される。
 
+## 起動 (Docker Compose)
+
+フロントエンドのビルド成果物を Spring Boot の jar に同梱した単一コンテナを起動する。動作確認・本番想定の構成検証に利用する。
+
+事前に `.env.example` を `.env` にコピーし、`SPRING_PROFILES_ACTIVE` および必要な接続情報を設定しておく。
+
+```bash
+docker compose up --build       # ビルド + 起動 (フォアグラウンド)
+docker compose up -d --build    # バックグラウンド起動
+docker compose logs -f          # ログ追跡
+docker compose down             # 停止
+```
+
+ブラウザで `http://localhost:8080` を開く (Vite dev server は使わず、Spring Boot がフロントエンドの静的ファイルも配信する)。
+
+依存パッケージや Java/Node のバージョンを更新した場合は `--build` を付けてイメージを再生成する。
+
 ## 環境変数
 
 `.env.example` を `.env` にコピーして利用する。`.env` は git 管理外。
@@ -42,12 +59,41 @@ npm run dev
 cp .env.example .env
 ```
 
-`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしのモック起動。real プロファイル (空または未指定) では `SF_USERNAME` / `SF_PASSWORD` / `SF_SECURITY_TOKEN` / `SF_LOGIN_URL` / `SF_API_VERSION` を設定する。SOQL 画面の取得上限は Salesforce の `LIMIT` 上限に合わせて既定 2,000 件とし、デバッグ時のみ `SF_QUERY_BATCH_SIZE` で上書きできる。
+### モック向け設定例 (`.env`)
 
-SOAP `login()` は Salesforce 側の制約により API v65.0 以上では利用できないため、real プロファイルのログイン確認では `SF_API_VERSION=64.0` を指定する。新規 Developer Edition org では `Setup` の `ユーザインターフェース` で `Enable SOAP API login()` を有効化する必要がある。
+`SPRING_PROFILES_ACTIVE=mock` で Salesforce 接続なしの mock 起動を行う場合の例。
 
-real プロファイルのログイン画面では Salesforce のユーザー名とパスワードのみを入力する。SOAP Partner API へのログイン時は、サーバ側で `SF_SECURITY_TOKEN` をパスワードに連結して送信する。
+```env
+SPRING_PROFILES_ACTIVE=mock
 
-## Salesforce WSC / Partner API 入手結論
+# UI ログイン用 (mock プロファイルの認証)
+APP_LOGIN_EMAIL=<任意のメールアドレス>
+APP_LOGIN_PASSWORD=<任意のパスワード>
+```
 
-`com.force.api:force-wsc:67.0.0` (SOAP framework) と `com.force.api:force-partner-api:67.0.0` (Partner WSDL から生成された stub) が Maven Central で取得可能。`backend/pom.xml` で両方を依存に加える。
+- `APP_LOGIN_EMAIL` / `APP_LOGIN_PASSWORD` を未設定にすると `application-mock.properties` のデフォルト (`test/test`) で起動する。ローカル動作確認のみなら省略可。
+- 公開エンドポイントへのデプロイ時は必ず上書きすること (詳細は `docs/deployment/demo-deploy.md`)。
+
+### 本番向け設定例 (`.env`, real プロファイル)
+
+実 Salesforce 組織への接続を行う場合の例。`SPRING_PROFILES_ACTIVE` は**空文字列を明示**する (行を削除すると `application.properties` のデフォルト `mock` が有効になるため)。
+
+```env
+# real プロファイル (空文字列を明示)
+SPRING_PROFILES_ACTIVE=
+
+# Salesforce Integration User
+SF_USERNAME=integration-user@example.com
+SF_PASSWORD=<Salesforce パスワード>
+SF_SECURITY_TOKEN=<Salesforce セキュリティトークン>
+SF_LOGIN_URL=https://login.salesforce.com
+SF_API_VERSION=64.0
+
+# (任意) HTTPS 経由で公開する場合
+# COOKIE_SECURE=true
+```
+
+- `SF_API_VERSION=64.0` は SOAP `login()` の制約に合わせた指定 (v65.0以上では利用できない)。なお、Saleseforce側の `Enable SOAP API login()` の設定が、有効化されている必要がある。
+- real プロファイルのログイン画面では Salesforce のユーザー名とパスワードのみを入力する。SOAP Partner API へのログイン時は、サーバ側で `SF_SECURITY_TOKEN` をパスワードに連結して送信する。
+- `SF_QUERY_BATCH_SIZE` は通常省略する (デフォルト 2,000 件)。
+- HTTPS 終端のリバースプロキシ越しに公開する場合のみ `COOKIE_SECURE=true` を有効化する。HTTP のローカル `docker compose` 起動時に `true` にすると Cookie が機能しないので注意。
