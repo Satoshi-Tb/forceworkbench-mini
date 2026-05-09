@@ -1,4 +1,4 @@
-package com.example.sfqry.auth;
+package com.example.sfqry.auth.model;
 
 import java.io.Serializable;
 

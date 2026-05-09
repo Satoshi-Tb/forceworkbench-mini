@@ -1,6 +1,6 @@
 package com.example.sfqry.describe;
 
-import com.example.sfqry.common.SalesforceClient;
+import com.example.sfqry.infra.salesforce.SalesforceClient;
 import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import org.springframework.cache.annotation.Cacheable;

@@ -1,6 +1,6 @@
 package com.example.sfqry.query;
 
-import com.example.sfqry.common.ApiException;
+import com.example.sfqry.error.ApiException;
 import org.springframework.http.HttpStatus;
 
 final class SoqlQueryGuard {

@@ -1,7 +1,9 @@
 package com.example.sfqry.auth;
 
-import com.example.sfqry.common.LoginResult;
-import com.example.sfqry.common.SalesforceClient;
+import com.example.sfqry.auth.dto.LoginRequestDto;
+import com.example.sfqry.auth.dto.LoginResultDto;
+import com.example.sfqry.auth.model.UserInfo;
+import com.example.sfqry.infra.salesforce.SalesforceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +27,11 @@ public class AppLoginController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserInfo> login(@RequestBody LoginRequest req) {
+    public ResponseEntity<UserInfo> login(@RequestBody LoginRequestDto req) {
         if (req == null || req.email() == null || req.password() == null) {
             return ResponseEntity.status(401).build();
         }
-        LoginResult result = salesforceClient.login(req.email(), req.password());
+        LoginResultDto result = salesforceClient.login(req.email(), req.password());
         sessionContext.setSessionId(result.sessionId());
         sessionContext.setInstanceUrl(result.instanceUrl());
         sessionContext.setUserInfo(result.userInfo());

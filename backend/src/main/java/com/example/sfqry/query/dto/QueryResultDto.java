@@ -1,4 +1,4 @@
-package com.example.sfqry.query;
+package com.example.sfqry.query.dto;
 
 import java.util.List;
 import java.util.Map;

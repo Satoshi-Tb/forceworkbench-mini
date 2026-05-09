@@ -1,9 +1,11 @@
-package com.example.sfqry.common;
+package com.example.sfqry.infra.salesforce;
 
-import com.example.sfqry.auth.UserInfo;
+import com.example.sfqry.auth.dto.LoginResultDto;
+import com.example.sfqry.auth.model.UserInfo;
 import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
-import com.example.sfqry.query.QueryResultDto;
+import com.example.sfqry.error.ApiException;
+import com.example.sfqry.query.dto.QueryResultDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +42,7 @@ public class MockSalesforceClient implements SalesforceClient {
     }
 
     @Override
-    public LoginResult login(String email, String password) {
+    public LoginResultDto login(String email, String password) {
         byte[] emailBytes = email.getBytes(StandardCharsets.UTF_8);
         byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
         if (!MessageDigest.isEqual(emailBytes, expectedEmail)
@@ -52,7 +54,7 @@ public class MockSalesforceClient implements SalesforceClient {
                 "Test User",
                 "00D000000000001",
                 "005000000000001");
-        return new LoginResult(
+        return new LoginResultDto(
                 "MOCK_SESSION_" + UUID.randomUUID(),
                 "https://mock.example.salesforce.com",
                 userInfo);
