@@ -1,4 +1,4 @@
-package com.example.sfqry.config;
+package com.example.sfqry.infra.salesforce;
 
 import com.sforce.soap.partner.PartnerConnection;
 import com.sforce.ws.ConnectionException;

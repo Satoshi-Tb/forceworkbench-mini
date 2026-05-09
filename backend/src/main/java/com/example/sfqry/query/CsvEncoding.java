@@ -1,6 +1,6 @@
 package com.example.sfqry.query;
 
-import com.example.sfqry.common.ApiException;
+import com.example.sfqry.error.ApiException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;

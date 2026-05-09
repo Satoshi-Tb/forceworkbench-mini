@@ -1,4 +1,4 @@
-package com.example.sfqry.common;
+package com.example.sfqry.error;
 
 import org.springframework.http.HttpStatus;
 

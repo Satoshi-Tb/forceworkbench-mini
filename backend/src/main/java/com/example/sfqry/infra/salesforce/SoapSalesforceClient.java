@@ -1,14 +1,14 @@
-package com.example.sfqry.common;
+package com.example.sfqry.infra.salesforce;
 
 import com.example.sfqry.auth.SessionContext;
-import com.example.sfqry.auth.UserInfo;
-import com.example.sfqry.config.PartnerConnectionFactory;
-import com.example.sfqry.config.SalesforceProperties;
+import com.example.sfqry.auth.dto.LoginResultDto;
+import com.example.sfqry.auth.model.UserInfo;
 import com.example.sfqry.describe.dto.ChildRelationshipDto;
 import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.describe.dto.FieldDto;
-import com.example.sfqry.query.QueryResultDto;
+import com.example.sfqry.error.ApiException;
+import com.example.sfqry.query.dto.QueryResultDto;
 import com.sforce.soap.partner.ChildRelationship;
 import com.sforce.soap.partner.DescribeGlobalResult;
 import com.sforce.soap.partner.DescribeGlobalSObjectResult;
@@ -60,7 +60,7 @@ public class SoapSalesforceClient implements SalesforceClient {
     }
 
     @Override
-    public LoginResult login(String email, String password) {
+    public LoginResultDto login(String email, String password) {
         if (props.username() == null || props.username().isBlank()
                 || props.password() == null || props.password().isBlank()) {
             throw new ApiException(
@@ -88,7 +88,7 @@ public class SoapSalesforceClient implements SalesforceClient {
                     ui.getUserFullName(),
                     ui.getOrganizationId(),
                     ui.getUserId());
-            return new LoginResult(sessionId, instanceUrl, userInfo);
+            return new LoginResultDto(sessionId, instanceUrl, userInfo);
         } catch (LoginFault e) {
             throw new ApiException("INVALID_LOGIN", e.getExceptionMessage(), HttpStatus.UNAUTHORIZED);
         } catch (ApiFault e) {

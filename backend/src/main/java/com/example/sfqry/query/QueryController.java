@@ -1,5 +1,7 @@
 package com.example.sfqry.query;
 
+import com.example.sfqry.query.dto.QueryRequestDto;
+import com.example.sfqry.query.dto.QueryResultDto;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

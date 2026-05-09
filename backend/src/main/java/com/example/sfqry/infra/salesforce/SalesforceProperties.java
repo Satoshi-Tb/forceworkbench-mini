@@ -1,4 +1,4 @@
-package com.example.sfqry.config;
+package com.example.sfqry.infra.salesforce;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

@@ -1,9 +1,12 @@
 package com.example.sfqry.auth;
 
+import com.example.sfqry.auth.model.UserInfo;
 import java.io.Serializable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
+// 本クラスは UserInfo と Salesforce セッション値をセッションライフサイクルに紐づけて保持するための、
+// セッションスコープのステートフル Bean。
 @Component
 @SessionScope
 public class SessionContext implements Serializable {
