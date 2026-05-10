@@ -9,14 +9,17 @@ import com.example.sfqry.describe.dto.DescribeGlobalDto;
 import com.example.sfqry.describe.dto.DescribeSObjectDto;
 import com.example.sfqry.infra.salesforce.SalesforceClient;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.cache.Cache;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,7 +40,10 @@ class DescribeServiceTest {
 
     @BeforeEach
     void clearCache() {
-        cacheManager.getCacheNames().forEach(name -> cacheManager.getCache(name).clear());
+        cacheManager.getCacheNames().stream()
+                .map(cacheManager::getCache)
+                .filter(Objects::nonNull)
+                .forEach(Cache::clear);
     }
 
     @Test
@@ -127,6 +133,7 @@ class DescribeServiceTest {
     }
 
     @EnableCaching
+    @TestConfiguration
     static class CacheConfig {
         @Bean
         CacheManager cacheManager() {
