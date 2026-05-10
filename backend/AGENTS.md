@@ -2,7 +2,6 @@
 
 ## テスト方針
 
-- ユーザから明示依頼がある場合のみ、新規テストコードを追加する。
 - テスト対象は public なサービスメソッド、Controller API、純粋ロジックを中心にする。
 - private メソッド、DTO / record の自動生成メソッド、Spring や Salesforce SDK 自体の挙動は直接テストしない。
 - `SoapSalesforceClient` の実 SOAP 呼び出しは外部依存のため自動テスト対象外とする。
