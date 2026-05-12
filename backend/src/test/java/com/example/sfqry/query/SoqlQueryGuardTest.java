@@ -21,6 +21,21 @@ class SoqlQueryGuardTest {
     }
 
     @Test
+    @DisplayName("SELECT前の空白を許可する")
+    void acceptsLeadingWhitespaceBeforeSelect() {
+        assertThatCode(() -> SoqlQueryGuard.validateSelectQuery("   SELECT Id FROM Account"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("文字列内のセミコロンを許可する")
+    void acceptsSemicolonInsideStringLiteral() {
+        assertThatCode(() -> SoqlQueryGuard.validateSelectQuery(
+                        "SELECT Id FROM Account WHERE Name = 'A; B'"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("空文字のSOQLを拒否する")
     void rejectsBlankQuery() {
         assertMalformed(" ");
@@ -30,6 +45,12 @@ class SoqlQueryGuardTest {
     @DisplayName("SELECT以外のSOQLを拒否する")
     void rejectsNonSelectQuery() {
         assertMalformed("FIND {Acme}");
+    }
+
+    @Test
+    @DisplayName("小文字のDMLを拒否する")
+    void rejectsLowercaseDmlVerbs() {
+        assertMalformed("update Account SET Name = 'Acme'");
     }
 
     @Test
@@ -51,11 +72,19 @@ class SoqlQueryGuardTest {
     }
 
     @Test
+    @DisplayName("FROM句前のブロックコメントを拒否する")
+    void rejectsCommentBeforeFromClause() {
+        assertMalformed("SELECT Id /* x */ FROM Account");
+    }
+
+    @Test
     @DisplayName("未閉じの文字列リテラルを拒否する")
     void rejectsUnclosedStringLiteral() {
         assertMalformed("SELECT Id FROM Account WHERE Name = 'Acme");
     }
 
+    // 例外の内容を検証するためのヘルパーメソッド
+    // 例外がApiExceptionで、コードがMALFORMED_QUERY、ステータスがBAD_REQUESTであることを検証する
     private static void assertMalformed(String soql) {
         assertThatThrownBy(() -> SoqlQueryGuard.validateSelectQuery(soql))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
