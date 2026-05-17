@@ -10,35 +10,29 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createRoute } from "@tanstack/react-router";
-import { useAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
-import { ResultGrid } from "../components/ResultGrid";
-import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
-import { getApiErrorMessage } from "../hooks/apiErrorMessage";
-import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
-import { useDescribeSObject } from "../hooks/useDescribeSObject";
-import { useExportCsv, type CsvEncoding } from "../hooks/useExportCsv";
-import { useRunSoql } from "../hooks/useRunSoql";
+import type { QueryResult } from "../../api/query";
+import { ResultGrid } from "../ResultGrid";
+import { SoqlQueryBuilder } from "../SoqlQueryBuilder";
+import { getApiErrorMessage } from "../../hooks/apiErrorMessage";
+import { useDescribeGlobal } from "../../hooks/useDescribeGlobal";
+import { useDescribeSObject } from "../../hooks/useDescribeSObject";
+import { useExportCsv, type CsvEncoding } from "../../hooks/useExportCsv";
+import { useRunSoql } from "../../hooks/useRunSoql";
 import {
-  builderStateAtom,
-  manualSoqlOverrideAtom,
-} from "../state/uiStateAtoms";
-import { buildSoql, type QueryBuilderState } from "../utils/soqlBuilder";
-import { rootRoute } from "./__root";
+  tabsAtom,
+  updateWorkbenchTab,
+  type SoqlTabState,
+  type WorkbenchTab,
+} from "../../state/workbenchAtoms";
+import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
 
-export const queryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/query",
-  component: QueryPage,
-});
+type SoqlTab = Extract<WorkbenchTab, { kind: "soql" }>;
 
-function QueryPage() {
-  const [builderState, setBuilderState] = useAtom(builderStateAtom);
-  const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
-    manualSoqlOverrideAtom,
-  );
-  const [csvEncoding, setCsvEncoding] = useState<CsvEncoding>("shift_jis");
+export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
+  const setTabs = useSetAtom(tabsAtom);
+  const [result, setResult] = useState<QueryResult | null>(null);
   const runSoql = useRunSoql();
   const exportCsv = useExportCsv();
   const {
@@ -50,7 +44,7 @@ function QueryPage() {
     data: describe,
     isLoading: describeLoading,
     error: describeError,
-  } = useDescribeSObject(builderState.objectName || undefined);
+  } = useDescribeSObject(tab.state.builderState.objectName || undefined);
   const objects = useMemo(
     () =>
       [...(globalData?.sobjects ?? [])]
@@ -59,11 +53,10 @@ function QueryPage() {
     [globalData?.sobjects],
   );
   const derivedSoql = useMemo(
-    () => buildSoql(builderState, describe?.fields ?? []),
-    [builderState, describe?.fields],
+    () => buildSoql(tab.state.builderState, describe?.fields ?? []),
+    [tab.state.builderState, describe?.fields],
   );
-  const soql = manualSoqlOverride ?? derivedSoql;
-  const result = runSoql.data ?? null;
+  const soql = tab.state.manualSoqlOverride ?? derivedSoql;
   const queryError = runSoql.error
     ? getApiErrorMessage(runSoql.error, "SOQL実行に失敗しました")
     : null;
@@ -72,31 +65,42 @@ function QueryPage() {
     : null;
   const error = csvError ?? queryError;
 
-  const handleBuilderChange = (next: QueryBuilderState) => {
-    setBuilderState(next);
-    setManualSoqlOverride(null);
+  const updateState = (patch: Partial<SoqlTabState>) => {
+    setTabs((tabs) =>
+      updateWorkbenchTab(tabs, tab.id, (current) =>
+        current.kind === "soql"
+          ? { ...current, state: { ...current.state, ...patch } }
+          : current,
+      ),
+    );
+  };
+
+  const handleBuilderChange = (builderState: QueryBuilderState) => {
+    updateState({ builderState, manualSoqlOverride: null });
   };
 
   const handleRun = () => {
     exportCsv.reset();
     runSoql.reset();
-    runSoql.mutate(soql);
+    runSoql.mutate(soql, {
+      onSuccess: (data) => {
+        setResult(data);
+        updateState({ lastRunSoql: soql });
+      },
+    });
   };
 
   const handleCsv = () => {
     exportCsv.reset();
     exportCsv.mutate({
       soql,
-      encoding: csvEncoding,
+      encoding: tab.state.csvEncoding,
       filename: `query_${formatJstTimestamp(new Date())}.csv`,
     });
   };
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        SOQL
-      </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {objectsError && (
         <Alert severity="error">オブジェクト情報の取得に失敗しました</Alert>
@@ -105,7 +109,7 @@ function QueryPage() {
         <Alert severity="error">項目情報の取得に失敗しました</Alert>
       )}
       <SoqlQueryBuilder
-        state={builderState}
+        state={tab.state.builderState}
         objects={objects}
         objectsLoading={objectsLoading}
         describe={describe}
@@ -115,7 +119,9 @@ function QueryPage() {
       <TextField
         label="SOQL"
         value={soql}
-        onChange={(event) => setManualSoqlOverride(event.target.value)}
+        onChange={(event) =>
+          updateState({ manualSoqlOverride: event.target.value })
+        }
         multiline
         minRows={4}
         fullWidth
@@ -124,25 +130,27 @@ function QueryPage() {
         <Button
           variant="contained"
           onClick={handleRun}
-          disabled={runSoql.isPending}
+          disabled={runSoql.isPending || !soql.trim()}
         >
           実行
         </Button>
         <Button
           variant="outlined"
           onClick={handleCsv}
-          disabled={exportCsv.isPending}
+          disabled={exportCsv.isPending || !soql.trim()}
         >
           CSV
         </Button>
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel id="csv-encoding-label">CSV文字コード</InputLabel>
+          <InputLabel id={`${tab.id}-csv-encoding-label`}>
+            CSV文字コード
+          </InputLabel>
           <Select
-            labelId="csv-encoding-label"
-            value={csvEncoding}
+            labelId={`${tab.id}-csv-encoding-label`}
+            value={tab.state.csvEncoding}
             label="CSV文字コード"
             onChange={(event) =>
-              setCsvEncoding(event.target.value as CsvEncoding)
+              updateState({ csvEncoding: event.target.value as CsvEncoding })
             }
           >
             <MenuItem value="utf-8">UTF-8</MenuItem>

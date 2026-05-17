@@ -6,8 +6,7 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { rootRoute } from "./routes/__root";
 import { indexRoute } from "./routes";
 import { loginRoute } from "./routes/login";
-import { queryRoute } from "./routes/query";
-import { describeRoute } from "./routes/describe";
+import { workbenchRoute } from "./routes/workbench";
 import { theme } from "./theme";
 
 const queryClient = new QueryClient();
@@ -15,8 +14,7 @@ const queryClient = new QueryClient();
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  queryRoute,
-  describeRoute,
+  workbenchRoute,
 ]);
 
 const router = createRouter({

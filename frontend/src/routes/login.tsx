@@ -31,7 +31,7 @@ function LoginPage() {
       { email, password },
       {
         onSuccess: () => {
-          void navigate({ to: "/query" });
+          void navigate({ to: "/workbench" });
         },
       },
     );

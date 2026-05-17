@@ -14,124 +14,83 @@ import {
   type GridColDef,
   type GridRowSelectionModel,
 } from "@mui/x-data-grid";
-import { useAtom, useAtomValue } from "jotai";
+import { useSetAtom } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import type {
   ChildRelationship,
   DescribeSObject,
   Field,
   PicklistValue,
-  SObjectSummary,
-} from "../api/describe";
-import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
-import { useDescribeSObject } from "../hooks/useDescribeSObject";
+} from "../../api/describe";
+import { useDescribeSObject } from "../../hooks/useDescribeSObject";
 import {
-  describeTabAtom,
-  selectedFieldNameAtom,
-  selectedSObjectAtom,
-  type DescribeTab,
-} from "../state/uiStateAtoms";
-import { ObjectPicker } from "./ObjectPicker";
+  tabsAtom,
+  updateWorkbenchTab,
+  type DescribeSubTab,
+  type WorkbenchTab,
+} from "../../state/workbenchAtoms";
 
-export function DescribeWorkspace() {
-  const selectedSObject = useAtomValue(selectedSObjectAtom);
-  const { data: globalData, isLoading: loadingObjects } = useDescribeGlobal();
-  const { data: describe, isLoading: loadingDescribe } = useDescribeSObject(
-    selectedSObject ?? undefined,
-  );
-  const [tab, setTab] = useAtom(describeTabAtom);
+type DescribeTab = Extract<WorkbenchTab, { kind: "describe" }>;
 
-  const objects = globalData?.sobjects ?? [];
-  const selectedSummary = objects.find(
-    (object) => object.name === selectedSObject,
+export function DescribeTabContent({ tab }: { tab: DescribeTab }) {
+  const setTabs = useSetAtom(tabsAtom);
+  const { data: describe, isLoading } = useDescribeSObject(
+    tab.state.sobjectName,
   );
 
-  return (
-    <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        参照情報
-      </Typography>
-      <Box
-        sx={{
-          display: "grid",
-          gap: 2,
-          gridTemplateColumns: { md: "360px minmax(0, 1fr)" },
-          gridTemplateRows: { xs: "auto auto", md: "auto" },
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <ObjectPicker objects={objects} loading={loadingObjects} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <ObjectDetailPanel
-            describe={describe}
-            loading={Boolean(selectedSObject) && loadingDescribe}
-            selectedSummary={selectedSummary}
-            tab={tab}
-            onTabChange={setTab}
-          />
-        </Box>
-      </Box>
-    </Stack>
-  );
-}
-
-function ObjectDetailPanel({
-  describe,
-  loading,
-  selectedSummary,
-  tab,
-  onTabChange,
-}: {
-  describe: DescribeSObject | undefined;
-  loading: boolean;
-  selectedSummary: SObjectSummary | undefined;
-  tab: DescribeTab;
-  onTabChange: (tab: DescribeTab) => void;
-}) {
-  if (!selectedSummary && !describe) {
-    return (
-      <Paper variant="outlined" sx={{ p: 3, minHeight: "calc(100vh - 180px)" }}>
-        <Typography color="text.secondary">
-          オブジェクトを選択してください。
-        </Typography>
-      </Paper>
+  useEffect(() => {
+    if (!describe) return;
+    const title =
+      describe.label === describe.name
+        ? describe.name
+        : `${describe.label} (${describe.name})`;
+    setTabs((tabs) =>
+      updateWorkbenchTab(tabs, tab.id, (current) =>
+        current.kind === "describe" ? { ...current, title } : current,
+      ),
     );
-  }
+  }, [describe, setTabs, tab.id]);
 
-  const label = describe?.label ?? selectedSummary?.label ?? "";
-  const name = describe?.name ?? selectedSummary?.name ?? "";
-  const custom = describe?.custom ?? selectedSummary?.custom ?? false;
+  const updateState = (patch: Partial<DescribeTab["state"]>) => {
+    setTabs((tabs) =>
+      updateWorkbenchTab(tabs, tab.id, (current) =>
+        current.kind === "describe"
+          ? { ...current, state: { ...current.state, ...patch } }
+          : current,
+      ),
+    );
+  };
 
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        minHeight: "calc(100vh - 180px)",
-      }}
-    >
+    <Paper variant="outlined">
       <Box sx={{ p: 2.5 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Typography variant="h5" component="h2">
-            {label || name}
+            {describe?.label ?? tab.state.sobjectName}
           </Typography>
-          <Chip
-            size="small"
-            label={custom ? "カスタムオブジェクト" : "標準オブジェクト"}
-            color={custom ? "secondary" : "primary"}
-            variant="outlined"
-          />
+          {describe && (
+            <Chip
+              size="small"
+              label={
+                describe.custom ? "カスタムオブジェクト" : "標準オブジェクト"
+              }
+              color={describe.custom ? "secondary" : "primary"}
+              variant="outlined"
+            />
+          )}
         </Stack>
-        {label && label !== name && (
+        {describe && describe.label !== describe.name && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {name}
+            {describe.name}
           </Typography>
         )}
       </Box>
       <Divider />
       <Tabs
-        value={tab}
-        onChange={(_, value: DescribeTab) => onTabChange(value)}
+        value={tab.state.activeSubTab}
+        onChange={(_, value: DescribeSubTab) =>
+          updateState({ activeSubTab: value })
+        }
       >
         <Tab value="overview" label="概要" />
         <Tab value="fields" label="項目" />
@@ -139,16 +98,20 @@ function ObjectDetailPanel({
       </Tabs>
       <Divider />
       <Box sx={{ p: 2.5 }}>
-        {loading && <CircularProgress size={24} />}
-        {!loading && tab === "overview" && describe && (
+        {isLoading && <CircularProgress size={24} />}
+        {!isLoading && tab.state.activeSubTab === "overview" && describe && (
           <OverviewTab describe={describe} />
         )}
-        {!loading && tab === "fields" && describe && (
-          <FieldsTab describe={describe} />
+        {!isLoading && tab.state.activeSubTab === "fields" && describe && (
+          <FieldsTab
+            tab={tab}
+            describe={describe}
+            onStateChange={updateState}
+          />
         )}
-        {!loading && tab === "relationships" && describe && (
-          <RelationshipsTab describe={describe} />
-        )}
+        {!isLoading &&
+          tab.state.activeSubTab === "relationships" &&
+          describe && <RelationshipsTab describe={describe} />}
       </Box>
     </Paper>
   );
@@ -217,7 +180,15 @@ const fieldColumns: GridColDef<FieldRow>[] = [
   { field: "requiredText", headerName: "必須", width: 90 },
 ];
 
-function FieldsTab({ describe }: { describe: DescribeSObject }) {
+function FieldsTab({
+  tab,
+  describe,
+  onStateChange,
+}: {
+  tab: DescribeTab;
+  describe: DescribeSObject;
+  onStateChange: (patch: Partial<DescribeTab["state"]>) => void;
+}) {
   const rows = useMemo<FieldRow[]>(
     () =>
       describe.fields.map((field) => ({
@@ -228,19 +199,19 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
       })),
     [describe.fields],
   );
-  const [selectedFieldName, setSelectedFieldName] = useAtom(
-    selectedFieldNameAtom,
-  );
+  const selectedFieldName = tab.state.selectedFieldName;
 
   useEffect(() => {
     if (rows.length === 0) {
-      setSelectedFieldName("");
+      if (selectedFieldName) {
+        onStateChange({ selectedFieldName: "" });
+      }
       return;
     }
     if (!rows.some((row) => row.name === selectedFieldName)) {
-      setSelectedFieldName(rows[0].name);
+      onStateChange({ selectedFieldName: rows[0].name });
     }
-  }, [rows, selectedFieldName, setSelectedFieldName]);
+  }, [onStateChange, rows, selectedFieldName]);
 
   const selectedField = rows.find((field) => field.name === selectedFieldName);
   const rowSelectionModel = useMemo<GridRowSelectionModel>(
@@ -270,7 +241,9 @@ function FieldsTab({ describe }: { describe: DescribeSObject }) {
             disableColumnMenu
             disableRowSelectionOnClick
             rowSelectionModel={rowSelectionModel}
-            onRowClick={(params) => setSelectedFieldName(params.row.name)}
+            onRowClick={(params) =>
+              onStateChange({ selectedFieldName: params.row.name })
+            }
             sx={{
               borderColor: "divider",
               "& .MuiDataGrid-row.Mui-selected": {
@@ -375,29 +348,27 @@ function FieldDetail({ field }: { field: FieldRow }) {
   ];
 
   return (
-    <Box sx={{ minHeight: 0 }}>
-      <Box
-        component="dl"
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "minmax(150px, 190px) 1fr",
-          m: 0,
-          maxHeight: "calc(100vh - 430px)",
-          overflowY: "auto",
-          rowGap: 1,
-        }}
-      >
-        {rows.map(([label, value]) => (
-          <Box key={label} sx={{ display: "contents" }}>
-            <Typography component="dt" color="text.secondary" variant="body2">
-              {label}
-            </Typography>
-            <Typography component="dd" sx={{ m: 0 }} variant="body2">
-              {value}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
+    <Box
+      component="dl"
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "minmax(150px, 190px) 1fr",
+        m: 0,
+        maxHeight: "calc(100vh - 430px)",
+        overflowY: "auto",
+        rowGap: 1,
+      }}
+    >
+      {rows.map(([label, value]) => (
+        <Box key={label} sx={{ display: "contents" }}>
+          <Typography component="dt" color="text.secondary" variant="body2">
+            {label}
+          </Typography>
+          <Typography component="dd" sx={{ m: 0 }} variant="body2">
+            {value}
+          </Typography>
+        </Box>
+      ))}
     </Box>
   );
 }
