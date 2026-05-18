@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
 import type { QueryResult } from "../../api/query";
 import { ResultGrid } from "../ResultGrid";
@@ -21,9 +21,9 @@ import { useDescribeSObject } from "../../hooks/useDescribeSObject";
 import { useExportCsv, type CsvEncoding } from "../../hooks/useExportCsv";
 import { useRunSoql } from "../../hooks/useRunSoql";
 import {
-  tabsAtom,
-  updateWorkbenchTab,
-  type SoqlTabState,
+  soqlBuilderStateAtomFamily,
+  soqlCsvEncodingAtomFamily,
+  soqlManualSoqlOverrideAtomFamily,
   type WorkbenchTab,
 } from "../../state/workbenchAtoms";
 import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
@@ -31,7 +31,15 @@ import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
 type SoqlTab = Extract<WorkbenchTab, { kind: "soql" }>;
 
 export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
-  const setTabs = useSetAtom(tabsAtom);
+  const [builderState, setBuilderState] = useAtom(
+    soqlBuilderStateAtomFamily(tab.id),
+  );
+  const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
+    soqlManualSoqlOverrideAtomFamily(tab.id),
+  );
+  const [csvEncoding, setCsvEncoding] = useAtom(
+    soqlCsvEncodingAtomFamily(tab.id),
+  );
   const [result, setResult] = useState<QueryResult | null>(null);
   const runSoql = useRunSoql();
   const exportCsv = useExportCsv();
@@ -44,7 +52,7 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     data: describe,
     isLoading: describeLoading,
     error: describeError,
-  } = useDescribeSObject(tab.state.builderState.objectName || undefined);
+  } = useDescribeSObject(builderState.objectName || undefined);
   const objects = useMemo(
     () =>
       [...(globalData?.sobjects ?? [])]
@@ -53,10 +61,10 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     [globalData?.sobjects],
   );
   const derivedSoql = useMemo(
-    () => buildSoql(tab.state.builderState, describe?.fields ?? []),
-    [tab.state.builderState, describe?.fields],
+    () => buildSoql(builderState, describe?.fields ?? []),
+    [builderState, describe?.fields],
   );
-  const soql = tab.state.manualSoqlOverride ?? derivedSoql;
+  const soql = manualSoqlOverride ?? derivedSoql;
   const queryError = runSoql.error
     ? getApiErrorMessage(runSoql.error, "SOQL実行に失敗しました")
     : null;
@@ -65,18 +73,9 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     : null;
   const error = csvError ?? queryError;
 
-  const updateState = (patch: Partial<SoqlTabState>) => {
-    setTabs((tabs) =>
-      updateWorkbenchTab(tabs, tab.id, (current) =>
-        current.kind === "soql"
-          ? { ...current, state: { ...current.state, ...patch } }
-          : current,
-      ),
-    );
-  };
-
-  const handleBuilderChange = (builderState: QueryBuilderState) => {
-    updateState({ builderState, manualSoqlOverride: null });
+  const handleBuilderChange = (nextBuilderState: QueryBuilderState) => {
+    setBuilderState(nextBuilderState);
+    setManualSoqlOverride(null);
   };
 
   const handleRun = () => {
@@ -85,7 +84,6 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     runSoql.mutate(soql, {
       onSuccess: (data) => {
         setResult(data);
-        updateState({ lastRunSoql: soql });
       },
     });
   };
@@ -94,7 +92,7 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     exportCsv.reset();
     exportCsv.mutate({
       soql,
-      encoding: tab.state.csvEncoding,
+      encoding: csvEncoding,
       filename: `query_${formatJstTimestamp(new Date())}.csv`,
     });
   };
@@ -109,7 +107,7 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
         <Alert severity="error">項目情報の取得に失敗しました</Alert>
       )}
       <SoqlQueryBuilder
-        state={tab.state.builderState}
+        state={builderState}
         objects={objects}
         objectsLoading={objectsLoading}
         describe={describe}
@@ -119,9 +117,7 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
       <TextField
         label="SOQL"
         value={soql}
-        onChange={(event) =>
-          updateState({ manualSoqlOverride: event.target.value })
-        }
+        onChange={(event) => setManualSoqlOverride(event.target.value)}
         multiline
         minRows={4}
         fullWidth
@@ -147,10 +143,10 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
           </InputLabel>
           <Select
             labelId={`${tab.id}-csv-encoding-label`}
-            value={tab.state.csvEncoding}
+            value={csvEncoding}
             label="CSV文字コード"
             onChange={(event) =>
-              updateState({ csvEncoding: event.target.value as CsvEncoding })
+              setCsvEncoding(event.target.value as CsvEncoding)
             }
           >
             <MenuItem value="utf-8">UTF-8</MenuItem>

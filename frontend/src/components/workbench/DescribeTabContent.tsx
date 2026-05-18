@@ -14,7 +14,7 @@ import {
   type GridColDef,
   type GridRowSelectionModel,
 } from "@mui/x-data-grid";
-import { useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import type {
   ChildRelationship,
@@ -24,6 +24,9 @@ import type {
 } from "../../api/describe";
 import { useDescribeSObject } from "../../hooks/useDescribeSObject";
 import {
+  describeActiveSubTabAtomFamily,
+  describeSelectedFieldNameAtomFamily,
+  describeSObjectNameAtomFamily,
   tabsAtom,
   updateWorkbenchTab,
   type DescribeSubTab,
@@ -34,9 +37,11 @@ type DescribeTab = Extract<WorkbenchTab, { kind: "describe" }>;
 
 export function DescribeTabContent({ tab }: { tab: DescribeTab }) {
   const setTabs = useSetAtom(tabsAtom);
-  const { data: describe, isLoading } = useDescribeSObject(
-    tab.state.sobjectName,
+  const sobjectName = useAtomValue(describeSObjectNameAtomFamily(tab.id));
+  const [activeSubTab, setActiveSubTab] = useAtom(
+    describeActiveSubTabAtomFamily(tab.id),
   );
+  const { data: describe, isLoading } = useDescribeSObject(sobjectName);
 
   useEffect(() => {
     if (!describe) return;
@@ -51,22 +56,12 @@ export function DescribeTabContent({ tab }: { tab: DescribeTab }) {
     );
   }, [describe, setTabs, tab.id]);
 
-  const updateState = (patch: Partial<DescribeTab["state"]>) => {
-    setTabs((tabs) =>
-      updateWorkbenchTab(tabs, tab.id, (current) =>
-        current.kind === "describe"
-          ? { ...current, state: { ...current.state, ...patch } }
-          : current,
-      ),
-    );
-  };
-
   return (
     <Paper variant="outlined">
       <Box sx={{ p: 2.5 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Typography variant="h5" component="h2">
-            {describe?.label ?? tab.state.sobjectName}
+            {describe?.label ?? sobjectName}
           </Typography>
           {describe && (
             <Chip
@@ -87,10 +82,8 @@ export function DescribeTabContent({ tab }: { tab: DescribeTab }) {
       </Box>
       <Divider />
       <Tabs
-        value={tab.state.activeSubTab}
-        onChange={(_, value: DescribeSubTab) =>
-          updateState({ activeSubTab: value })
-        }
+        value={activeSubTab}
+        onChange={(_, value: DescribeSubTab) => setActiveSubTab(value)}
       >
         <Tab value="overview" label="概要" />
         <Tab value="fields" label="項目" />
@@ -99,19 +92,15 @@ export function DescribeTabContent({ tab }: { tab: DescribeTab }) {
       <Divider />
       <Box sx={{ p: 2.5 }}>
         {isLoading && <CircularProgress size={24} />}
-        {!isLoading && tab.state.activeSubTab === "overview" && describe && (
+        {!isLoading && activeSubTab === "overview" && describe && (
           <OverviewTab describe={describe} />
         )}
-        {!isLoading && tab.state.activeSubTab === "fields" && describe && (
-          <FieldsTab
-            tab={tab}
-            describe={describe}
-            onStateChange={updateState}
-          />
+        {!isLoading && activeSubTab === "fields" && describe && (
+          <FieldsTab tabId={tab.id} describe={describe} />
         )}
-        {!isLoading &&
-          tab.state.activeSubTab === "relationships" &&
-          describe && <RelationshipsTab describe={describe} />}
+        {!isLoading && activeSubTab === "relationships" && describe && (
+          <RelationshipsTab describe={describe} />
+        )}
       </Box>
     </Paper>
   );
@@ -181,14 +170,15 @@ const fieldColumns: GridColDef<FieldRow>[] = [
 ];
 
 function FieldsTab({
-  tab,
+  tabId,
   describe,
-  onStateChange,
 }: {
-  tab: DescribeTab;
+  tabId: string;
   describe: DescribeSObject;
-  onStateChange: (patch: Partial<DescribeTab["state"]>) => void;
 }) {
+  const [selectedFieldName, setSelectedFieldName] = useAtom(
+    describeSelectedFieldNameAtomFamily(tabId),
+  );
   const rows = useMemo<FieldRow[]>(
     () =>
       describe.fields.map((field) => ({
@@ -199,19 +189,18 @@ function FieldsTab({
       })),
     [describe.fields],
   );
-  const selectedFieldName = tab.state.selectedFieldName;
 
   useEffect(() => {
     if (rows.length === 0) {
       if (selectedFieldName) {
-        onStateChange({ selectedFieldName: "" });
+        setSelectedFieldName("");
       }
       return;
     }
     if (!rows.some((row) => row.name === selectedFieldName)) {
-      onStateChange({ selectedFieldName: rows[0].name });
+      setSelectedFieldName(rows[0].name);
     }
-  }, [onStateChange, rows, selectedFieldName]);
+  }, [rows, selectedFieldName, setSelectedFieldName]);
 
   const selectedField = rows.find((field) => field.name === selectedFieldName);
   const rowSelectionModel = useMemo<GridRowSelectionModel>(
@@ -241,9 +230,7 @@ function FieldsTab({
             disableColumnMenu
             disableRowSelectionOnClick
             rowSelectionModel={rowSelectionModel}
-            onRowClick={(params) =>
-              onStateChange({ selectedFieldName: params.row.name })
-            }
+            onRowClick={(params) => setSelectedFieldName(params.row.name)}
             sx={{
               borderColor: "divider",
               "& .MuiDataGrid-row.Mui-selected": {
