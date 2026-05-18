@@ -49,6 +49,22 @@ action atom (write-only atom) は以下に該当する場合のみ使用する:
 - 複数コンポーネントから使うなら共通カスタムフック
 - React 外からも使うなら純粋関数を `selectors.ts` 等で export
 
+### 6. atom 定義ファイルの構成: 役割別分割 (`index.ts` なし) を採用
+
+`state/<domain>/` 配下に **役割別** で複数ファイルに分割する。
+
+```
+state/<domain>/
+  types.ts    # 型定義のみ
+  atoms.ts    # PrimitiveAtom / atomFamily / focusAtom helper / 純粋関数
+  actions.ts  # write-only action atom
+```
+
+- 各ファイルは公開境界をそのまま export し、import 元は **ファイル単位で直接 import** する (`from "@/state/workbench/actions"` 等)
+- バレル (`index.ts`) は置かない (理由は Alternatives G)
+- 量が増えて分割粒度を細かくする場合 (例: `families.ts` / `selectors.ts`) もこの方針内で拡張する
+- ドメイン数が継続的に増える見込みが立った場合は機能ドメイン別フォルダ (Alternatives E) への移行を再検討する
+
 ## Consequences
 
 ### Positive
@@ -82,6 +98,25 @@ action atom (write-only atom) は以下に該当する場合のみ使用する:
 ### D. atomFamily の代わりに `atom<Map<K, V>>` を使う
 
 **却下理由**: 購読粒度が Map 全体になり、任意のキーの変更で全購読者が再レンダリングされる。タブ機能のように「キーごとに独立した state」が並存するケースでは性能・整合性ともに atomFamily が優位。
+
+### E. 機能ドメイン別フォルダ (`features/<domain>/state/`) でコロケーションする
+
+**却下理由**: 本プロジェクト規模では state 管理ドメインが少数 (現状ほぼタブ機能のみ)。features フォルダを切ると state の置き場所判断が逆に増え、共有 atom (`currentUserAtom` 等) の置き場所に迷いが出る。ドメイン数が継続的に増える見込みが立った時点で再検討する。
+
+### F. atom 層を隠蔽するカスタムフック層 (`useTabs()`, `useAddDescribeTab()` 等) で公開
+
+**却下理由**: atom 構造変更を吸収できる利点はあるが、「1 atom = 1 hook」を量産する設計と相性が悪く、Decision 3 の「1 atom = 1 set action atom を機械的に展開しない」と同じ過剰さを生む。atom 構造を頻繁に変える要件・テスト時に hook をモックする要件も現状ない。
+
+### G. バレル (`index.ts`) で公開 API を集約する
+
+**却下理由**:
+
+- 役割別分割した意味が薄れる (import 元は何でも index 経由になり、ファイル分割の構造が呼び出し側から見えなくなる)
+- バレル経由の import は循環参照のグラフが追いにくく、Vite/TS が解決できない循環を生みやすい
+- Vite/Rollup の tree-shaking は直接 import でも効くので性能上の利点が無い
+- 現状の atom 内に「外から触らせたくない内部 atom」が無く、公開 API の境界を強制する要件も薄い
+
+将来「内部 atom と公開 atom を線引きしたい」「ファイル構造を頻繁に変えて import 元を不安定にしたくない」要件が出てきた時点で再検討する。
 
 ## References
 
