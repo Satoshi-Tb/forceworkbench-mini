@@ -65,6 +65,19 @@ state/<domain>/
 - 量が増えて分割粒度を細かくする場合 (例: `families.ts` / `selectors.ts`) もこの方針内で拡張する
 - ドメイン数が継続的に増える見込みが立った場合は機能ドメイン別フォルダ (Alternatives E) への移行を再検討する
 
+### 7. atomFamily の import 元: `jotai-family` パッケージを採用
+
+`atomFamily` は **`jotai-family` パッケージから import する** (`jotai/utils` 経由は採用しない)。
+
+```ts
+import { atomFamily } from "jotai-family";
+```
+
+- `focusAtom` は同様に `jotai-optics` パッケージから取得する (jotai 本体に元から存在しないため自明)
+- `jotai-family` / `jotai-optics` ともに jotai 公式の jotaijs org が提供する分離パッケージ
+
+理由は次節 Alternatives H 参照。
+
 ## Consequences
 
 ### Positive
@@ -117,6 +130,12 @@ state/<domain>/
 - 現状の atom 内に「外から触らせたくない内部 atom」が無く、公開 API の境界を強制する要件も薄い
 
 将来「内部 atom と公開 atom を線引きしたい」「ファイル構造を頻繁に変えて import 元を不安定にしたくない」要件が出てきた時点で再検討する。
+
+### H. `atomFamily` を `jotai/utils` から import する
+
+**却下理由**: `jotai/utils` 配下のユーティリティ群は将来的に分離パッケージへ移行する方向で議論されており、現時点で専用パッケージ (`jotai-family`) を採用しておくほうが将来の移行コストを下げられる。`focusAtom` は既に `jotai-optics` という分離パッケージ経由でしか取れないため、import 元のスタイルを「**分離パッケージから取る**」で統一できる利点もある。
+
+依存パッケージが 1 つ増える点はトレードオフだが、`jotai-family` は単機能の薄いパッケージで、サイズ・保守上の負担は限定的。
 
 ## References
 

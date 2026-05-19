@@ -32,6 +32,7 @@
 - **action atom (write-only atom) は業務ロジックを伴う複数 atom 更新のみに使用** — 単純な値の代入は `useSetAtom(primitiveAtom)` で十分。1 atom = 1 set action atom の機械的展開は採らない。
 - **atomFamily は購読粒度を局所化したい場合に使用** — タブ ID 等のキー別独立 state で、キー間の不要な再レンダリング波及を避けたい場合。
   - **キー破棄時に `family.remove(key)` を必ず呼ぶ** — atomFamily は内部 Map にキーごとの atom インスタンスをキャッシュするため、解放しないとメモリリークになる。例: タブを閉じる action atom 内で `describeTabStateFamily.remove(tabId)` を実行する。
+  - **import 元は `jotai-family` パッケージ** — `import { atomFamily } from "jotai-family"`。`jotai/utils` 経由は使わない (理由は ADR-0001 Decision 7 / Alternatives H)。`focusAtom` も同様に `jotai-optics` から取る。
 - **計算結果の共有は派生 atom ではなく `useMemo` / カスタムフック / 純粋関数 export で代替**。
 
 詳細・検討経緯: [docs/adr/0001-jotai-atom-usage.md](../docs/adr/0001-jotai-atom-usage.md)
