@@ -16,10 +16,8 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import type { SObjectSummary } from "../../api/describe";
 import { useDescribeGlobal } from "../../hooks/useDescribeGlobal";
-import {
-  addDescribeTabAtom,
-  treeSelectedSObjectAtom,
-} from "../../state/workbenchAtoms";
+import { addDescribeTabAtom } from "../../state/workbench/actions";
+import { treeSelectedSObjectAtom } from "../../state/workbench/atoms";
 
 export function ObjectTreePane() {
   const selectedObject = useAtomValue(treeSelectedSObjectAtom);

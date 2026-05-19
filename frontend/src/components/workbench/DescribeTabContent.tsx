@@ -29,9 +29,8 @@ import {
   describeSObjectNameAtomFamily,
   tabsAtom,
   updateWorkbenchTab,
-  type DescribeSubTab,
-  type WorkbenchTab,
-} from "../../state/workbenchAtoms";
+} from "../../state/workbench/atoms";
+import type { DescribeSubTab, WorkbenchTab } from "../../state/workbench/types";
 
 type DescribeTab = Extract<WorkbenchTab, { kind: "describe" }>;
 

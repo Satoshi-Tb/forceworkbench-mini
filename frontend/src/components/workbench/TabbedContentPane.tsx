@@ -13,11 +13,10 @@ import {
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   activateTabAtom,
-  activeTabIdAtom,
   addSoqlTabAtom,
   closeTabAtom,
-  tabsAtom,
-} from "../../state/workbenchAtoms";
+} from "../../state/workbench/actions";
+import { activeTabIdAtom, tabsAtom } from "../../state/workbench/atoms";
 import { DescribeTabContent } from "./DescribeTabContent";
 import { SoqlTabContent } from "./SoqlTabContent";
 
@@ -126,6 +125,12 @@ export function TabbedContentPane() {
 
         {activeDescribeTab && <DescribeTabContent tab={activeDescribeTab} />}
 
+        {/* 
+        SOQL実行結果はグローバルキャッシュ化していない。よって、コンポーネントがアンマウントされるとSOQL実行結果がクリアされてしまう。
+        これを防ぐため、アクティブ状態の有無にかかわらず、SOQLタブの内容は常にDOM上に存在させ、
+        非アクティブなタブは display: none で非表示にする。
+        SOQLタブの同時表示数は10～20程度と想定しているため、パフォーマンスへの影響は小さいと判断。
+         */}
         {tabs
           .filter((tab) => tab.kind === "soql")
           .map((tab) => (

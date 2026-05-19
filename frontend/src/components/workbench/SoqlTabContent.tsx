@@ -24,8 +24,8 @@ import {
   soqlBuilderStateAtomFamily,
   soqlCsvEncodingAtomFamily,
   soqlManualSoqlOverrideAtomFamily,
-  type WorkbenchTab,
-} from "../../state/workbenchAtoms";
+} from "../../state/workbench/atoms";
+import type { WorkbenchTab } from "../../state/workbench/types";
 import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
 
 type SoqlTab = Extract<WorkbenchTab, { kind: "soql" }>;
