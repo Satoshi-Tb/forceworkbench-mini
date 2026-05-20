@@ -48,7 +48,7 @@
 - フォーマッタ: `npm run format`
 - リント: `npm run lint`
 - ビルド: `npm run build`
-- 単体テスト: 現状は導入対象外。明示依頼があるまで `npm run test` やテスト基盤を追加しない
+- 単体テスト: 方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Vitest を採用・純粋関数と入力チェックに限定・見た目テストは行わない)。テスト基盤と `npm run test` スクリプトの追加は issue #26 で実施する (issue #11 完了後)
 
 **バックエンド:**
 
@@ -59,4 +59,4 @@
 
 **E2Eテスト:**
 
-- 現状は導入対象外。明示依頼があるまで `npm run test:e2e` や Playwright 等を追加しない
+- 方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Playwright を採用・正常系中心・バックエンドは `application-mock` プロファイルで `webServer` 経由自動起動)。テスト基盤と `npm run test:e2e` スクリプトの追加は issue #26 で実施する
