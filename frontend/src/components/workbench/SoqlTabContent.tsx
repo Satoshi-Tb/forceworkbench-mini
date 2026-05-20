@@ -10,35 +10,37 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createRoute } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
-import { ResultGrid } from "../components/ResultGrid";
-import { SoqlQueryBuilder } from "../components/SoqlQueryBuilder";
-import { getApiErrorMessage } from "../hooks/apiErrorMessage";
-import { useDescribeGlobal } from "../hooks/useDescribeGlobal";
-import { useDescribeSObject } from "../hooks/useDescribeSObject";
-import { useExportCsv, type CsvEncoding } from "../hooks/useExportCsv";
-import { useRunSoql } from "../hooks/useRunSoql";
+import type { QueryResult } from "../../api/query";
+import { ResultGrid } from "../ResultGrid";
+import { SoqlQueryBuilder } from "../SoqlQueryBuilder";
+import { getApiErrorMessage } from "../../hooks/apiErrorMessage";
+import { useDescribeGlobal } from "../../hooks/useDescribeGlobal";
+import { useDescribeSObject } from "../../hooks/useDescribeSObject";
+import { useExportCsv, type CsvEncoding } from "../../hooks/useExportCsv";
+import { useRunSoql } from "../../hooks/useRunSoql";
 import {
-  builderStateAtom,
-  manualSoqlOverrideAtom,
-} from "../state/uiStateAtoms";
-import { buildSoql, type QueryBuilderState } from "../utils/soqlBuilder";
-import { rootRoute } from "./__root";
+  soqlBuilderStateAtomFamily,
+  soqlCsvEncodingAtomFamily,
+  soqlManualSoqlOverrideAtomFamily,
+} from "../../state/workbench/atoms";
+import type { WorkbenchTab } from "../../state/workbench/types";
+import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
 
-export const queryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/query",
-  component: QueryPage,
-});
+type SoqlTab = Extract<WorkbenchTab, { kind: "soql" }>;
 
-function QueryPage() {
-  const [builderState, setBuilderState] = useAtom(builderStateAtom);
-  const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
-    manualSoqlOverrideAtom,
+export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
+  const [builderState, setBuilderState] = useAtom(
+    soqlBuilderStateAtomFamily(tab.id),
   );
-  const [csvEncoding, setCsvEncoding] = useState<CsvEncoding>("shift_jis");
+  const [manualSoqlOverride, setManualSoqlOverride] = useAtom(
+    soqlManualSoqlOverrideAtomFamily(tab.id),
+  );
+  const [csvEncoding, setCsvEncoding] = useAtom(
+    soqlCsvEncodingAtomFamily(tab.id),
+  );
+  const [result, setResult] = useState<QueryResult | null>(null);
   const runSoql = useRunSoql();
   const exportCsv = useExportCsv();
   const {
@@ -63,7 +65,6 @@ function QueryPage() {
     [builderState, describe?.fields],
   );
   const soql = manualSoqlOverride ?? derivedSoql;
-  const result = runSoql.data ?? null;
   const queryError = runSoql.error
     ? getApiErrorMessage(runSoql.error, "SOQL実行に失敗しました")
     : null;
@@ -72,15 +73,19 @@ function QueryPage() {
     : null;
   const error = csvError ?? queryError;
 
-  const handleBuilderChange = (next: QueryBuilderState) => {
-    setBuilderState(next);
+  const handleBuilderChange = (nextBuilderState: QueryBuilderState) => {
+    setBuilderState(nextBuilderState);
     setManualSoqlOverride(null);
   };
 
   const handleRun = () => {
     exportCsv.reset();
     runSoql.reset();
-    runSoql.mutate(soql);
+    runSoql.mutate(soql, {
+      onSuccess: (data) => {
+        setResult(data);
+      },
+    });
   };
 
   const handleCsv = () => {
@@ -94,9 +99,6 @@ function QueryPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        SOQL
-      </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {objectsError && (
         <Alert severity="error">オブジェクト情報の取得に失敗しました</Alert>
@@ -124,21 +126,23 @@ function QueryPage() {
         <Button
           variant="contained"
           onClick={handleRun}
-          disabled={runSoql.isPending}
+          disabled={runSoql.isPending || !soql.trim()}
         >
           実行
         </Button>
         <Button
           variant="outlined"
           onClick={handleCsv}
-          disabled={exportCsv.isPending}
+          disabled={exportCsv.isPending || !soql.trim()}
         >
           CSV
         </Button>
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel id="csv-encoding-label">CSV文字コード</InputLabel>
+          <InputLabel id={`${tab.id}-csv-encoding-label`}>
+            CSV文字コード
+          </InputLabel>
           <Select
-            labelId="csv-encoding-label"
+            labelId={`${tab.id}-csv-encoding-label`}
             value={csvEncoding}
             label="CSV文字コード"
             onChange={(event) =>

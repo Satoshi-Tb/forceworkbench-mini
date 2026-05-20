@@ -13,7 +13,6 @@ import {
   createRootRouteWithContext,
   redirect,
   useNavigate,
-  useRouterState,
 } from "@tanstack/react-router";
 import { Provider } from "jotai";
 import {
@@ -39,13 +38,8 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const navigate = useNavigate();
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogout();
-  const queryActive = pathname.startsWith("/query");
-  const describeActive = pathname.startsWith("/describe");
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -64,21 +58,8 @@ function RootLayout() {
           </Typography>
           {user && (
             <>
-              <Button
-                component={Link}
-                to="/query"
-                color="inherit"
-                sx={navButtonSx(queryActive)}
-              >
-                クエリ
-              </Button>
-              <Button
-                component={Link}
-                to="/describe"
-                color="inherit"
-                sx={navButtonSx(describeActive)}
-              >
-                参照情報
+              <Button component={Link} to="/workbench" color="inherit">
+                ワークベンチ
               </Button>
               <Button onClick={handleLogout} color="inherit">
                 ログアウト
@@ -97,12 +78,4 @@ function RootLayout() {
       </Container>
     </Box>
   );
-}
-
-function navButtonSx(active: boolean) {
-  return {
-    bgcolor: active ? "action.selected" : undefined,
-    color: active ? "primary.main" : undefined,
-    fontWeight: active ? 700 : 500,
-  };
 }
