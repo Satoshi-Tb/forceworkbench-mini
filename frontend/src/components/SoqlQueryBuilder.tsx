@@ -30,6 +30,7 @@ import {
   type QueryCondition,
   type QueryOrder,
 } from "../utils/soqlBuilder";
+import { isValidLimitInput } from "../utils/soqlValidation";
 
 type SelectFieldOption = {
   name: string;
@@ -73,7 +74,7 @@ export function SoqlQueryBuilder({
   const sortableFields = fields.filter((field) => field.sortable);
   const filterableFields = fields.filter((field) => field.filterable);
   const fieldsDisabled = !state.objectName || describeLoading || !describe;
-  const limitInvalid = state.limit !== "" && !/^[1-9]\d*$/.test(state.limit);
+  const limitInvalid = !isValidLimitInput(state.limit);
   const fieldsAllSelected = state.fields.includes(FIELDS_ALL_SELECT_FIELD);
 
   const updateCondition = (id: string, patch: Partial<QueryCondition>) => {
