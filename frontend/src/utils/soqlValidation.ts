@@ -8,14 +8,14 @@ import {
 
 const queryConditionSchema = z.object({
   id: z.string().min(1),
-  field: z.string().min(1, "条件の項目を選択してください"),
+  field: z.string(),
   operator: z.enum(queryOperators),
-  value: z.string().trim().min(1, "条件の値を入力してください"),
+  value: z.string().trim(),
 });
 
 const queryOrderSchema = z.object({
   id: z.string().min(1),
-  field: z.string().min(1, "ソート項目を選択してください"),
+  field: z.string(),
   direction: z.enum(["ASC", "DESC"]),
   nullsOrder: z.enum(["FIRST", "LAST"]),
 });
@@ -27,10 +27,7 @@ export const queryBuilderStateSchema = z
     orders: z.array(queryOrderSchema),
     limit: z
       .string()
-      .refine(
-        (value) => value === "" || /^[1-9]\d*$/.test(value),
-        "LIMIT は正の整数で入力してください",
-      ),
+      .refine(isValidLimitInput, "LIMIT は正の整数で入力してください"),
     conditions: z.array(queryConditionSchema),
   })
   .superRefine((state, ctx) => {
@@ -68,17 +65,10 @@ export const queryBuilderStateSchema = z
     }
   });
 
-export type QueryBuilderInput = z.input<typeof queryBuilderStateSchema>;
-export type QueryBuilderValues = z.infer<typeof queryBuilderStateSchema>;
-
-export function validateQueryBuilderState(state: QueryBuilderState) {
-  return queryBuilderStateSchema.safeParse(state);
-}
-
 export function getQueryBuilderValidationMessage(
   state: QueryBuilderState,
 ): string | null {
-  const result = validateQueryBuilderState(state);
+  const result = queryBuilderStateSchema.safeParse(state);
   if (result.success) return null;
   return result.error.issues[0]?.message ?? "クエリ条件を確認してください";
 }

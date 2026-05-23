@@ -14,15 +14,24 @@ export type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export type LoginFormErrors = Partial<Record<keyof LoginFormInput, string>>;
 
-export function getLoginFormErrors(input: LoginFormInput): LoginFormErrors {
-  const result = loginFormSchema.safeParse(input);
-  if (result.success) return {};
+type LoginFormParseResult =
+  | { success: true; data: LoginFormValues }
+  | { success: false; errors: LoginFormErrors };
 
-  return result.error.issues.reduce<LoginFormErrors>((errors, issue) => {
-    const fieldName = issue.path[0];
-    if (fieldName === "email" || fieldName === "password") {
-      errors[fieldName] ??= issue.message;
-    }
-    return errors;
-  }, {});
+export function parseLoginForm(input: LoginFormInput): LoginFormParseResult {
+  const result = loginFormSchema.safeParse(input);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return {
+    success: false,
+    errors: result.error.issues.reduce<LoginFormErrors>((errors, issue) => {
+      const fieldName = issue.path[0];
+      if (fieldName === "email" || fieldName === "password") {
+        errors[fieldName] ??= issue.message;
+      }
+      return errors;
+    }, {}),
+  };
 }

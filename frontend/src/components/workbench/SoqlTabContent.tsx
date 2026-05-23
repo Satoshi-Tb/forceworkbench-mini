@@ -83,7 +83,7 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     setBuilderValidationError(null);
   };
 
-  const handleRun = () => {
+  const runWithValidation = (action: () => void) => {
     const validationError =
       manualSoqlOverride === null
         ? getQueryBuilderValidationMessage(builderState)
@@ -94,31 +94,29 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     }
 
     setBuilderValidationError(null);
-    exportCsv.reset();
-    runSoql.reset();
-    runSoql.mutate(soql, {
-      onSuccess: (data) => {
-        setResult(data);
-      },
+    action();
+  };
+
+  const handleRun = () => {
+    runWithValidation(() => {
+      exportCsv.reset();
+      runSoql.reset();
+      runSoql.mutate(soql, {
+        onSuccess: (data) => {
+          setResult(data);
+        },
+      });
     });
   };
 
   const handleCsv = () => {
-    const validationError =
-      manualSoqlOverride === null
-        ? getQueryBuilderValidationMessage(builderState)
-        : null;
-    if (validationError) {
-      setBuilderValidationError(validationError);
-      return;
-    }
-
-    setBuilderValidationError(null);
-    exportCsv.reset();
-    exportCsv.mutate({
-      soql,
-      encoding: csvEncoding,
-      filename: `query_${formatJstTimestamp(new Date())}.csv`,
+    runWithValidation(() => {
+      exportCsv.reset();
+      exportCsv.mutate({
+        soql,
+        encoding: csvEncoding,
+        filename: `query_${formatJstTimestamp(new Date())}.csv`,
+      });
     });
   };
 

@@ -10,11 +10,7 @@ import {
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useLogin } from "../hooks/useLogin";
-import {
-  getLoginFormErrors,
-  loginFormSchema,
-  type LoginFormErrors,
-} from "../utils/loginValidation";
+import { parseLoginForm, type LoginFormErrors } from "../utils/loginValidation";
 import { rootRoute } from "./__root";
 
 export const loginRoute = createRoute({
@@ -34,9 +30,9 @@ function LoginPage() {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const input = { email, password };
-    const result = loginFormSchema.safeParse(input);
+    const result = parseLoginForm(input);
     if (!result.success) {
-      setFormErrors(getLoginFormErrors(input));
+      setFormErrors(result.errors);
       return;
     }
 
