@@ -40,6 +40,7 @@ export const queryOperators = [
 
 export const COUNT_SELECT_FIELD = "COUNT()";
 export const FIELDS_ALL_SELECT_FIELD = "FIELDS(ALL)";
+export const FIELDS_ALL_DEFAULT_LIMIT = "200";
 export const specialSelectFields = [
   COUNT_SELECT_FIELD,
   FIELDS_ALL_SELECT_FIELD,
@@ -109,8 +110,13 @@ export function buildSoql(
     lines.push(`ORDER BY ${orders.join(", ")}`);
   }
 
-  if (/^[1-9]\d*$/.test(state.limit)) {
-    lines.push(`LIMIT ${state.limit}`);
+  const limit =
+    state.fields.includes(FIELDS_ALL_SELECT_FIELD) && state.limit === ""
+      ? FIELDS_ALL_DEFAULT_LIMIT
+      : state.limit;
+
+  if (/^[1-9]\d*$/.test(limit)) {
+    lines.push(`LIMIT ${limit}`);
   }
 
   return lines.join("\n");
