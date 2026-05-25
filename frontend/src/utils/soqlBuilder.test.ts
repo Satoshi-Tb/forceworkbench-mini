@@ -183,6 +183,7 @@ describe("フィールド選択可否", () => {
   );
 });
 
+// QueryBuilderState の標準ケースを作る。各テストでは検証対象の差分だけ patch で上書きする。
 function state(patch: Partial<QueryBuilderState>): QueryBuilderState {
   return {
     objectName: "Account",
@@ -194,6 +195,8 @@ function state(patch: Partial<QueryBuilderState>): QueryBuilderState {
   };
 }
 
+// buildSoql の型別フォーマット確認に必要な Field だけを作る。
+// UI 表示用の詳細属性は検証対象外のため固定値にする。
 function field(name: string, type: string): Field {
   return {
     name,

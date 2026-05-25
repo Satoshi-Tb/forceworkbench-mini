@@ -1,4 +1,4 @@
-import { expect, test, type Download, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 test("ログイン画面で空送信時に入力エラーを表示する", async ({ page }) => {
@@ -70,6 +70,7 @@ test("SOQL実行からページ送り・CSVダウンロード・Describe表示�
   await expect(page.getByRole("heading", { name: "ログイン" })).toBeVisible();
 });
 
+// mock プロファイルの既定ユーザーでログインする。認証後のワークベンチ操作を行う E2E でだけ使う。
 async function login(page: Page): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
@@ -77,6 +78,7 @@ async function login(page: Page): Promise<void> {
   await page.getByRole("button", { name: "ログイン" }).click();
 }
 
+// MUI Autocomplete の入力と候補選択をまとめる。単一候補を選ぶフィールド操作に限定する。
 async function selectAutocompleteOption(
   page: Page,
   label: string,
@@ -89,6 +91,7 @@ async function selectAutocompleteOption(
   await page.getByRole("option", { name: optionName }).click();
 }
 
+// CSV 文字コード Select の選択をまとめる。E2E で検証対象にする 2 種類だけを受け付ける。
 async function selectCsvEncoding(
   page: Page,
   encoding: "UTF-8" | "Shift_JIS",
@@ -97,15 +100,13 @@ async function selectCsvEncoding(
   await page.getByRole("option", { name: encoding }).click();
 }
 
+// CSV ボタン操作からダウンロードファイルの読み取りまでを扱う。
+// CSV 内容を文字コード別に検証する E2E でだけ使う。
 async function downloadCsv(page: Page): Promise<Buffer> {
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "CSV" }).click(),
   ]);
-  return readDownload(download);
-}
-
-async function readDownload(download: Download): Promise<Buffer> {
   const path = await download.path();
   if (!path) {
     throw new Error("Download path is unavailable");

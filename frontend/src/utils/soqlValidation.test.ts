@@ -35,27 +35,44 @@ describe("SOQLビルダー状態スキーマ", () => {
   });
 
   it("COUNT() と FIELDS(ALL) の同時選択を拒否する", () => {
-    expect(
-      firstMessage(
-        state({ fields: [COUNT_SELECT_FIELD, FIELDS_ALL_SELECT_FIELD] }),
-      ),
-    ).toBe("COUNT() と FIELDS(ALL) は同時に選択できません");
+    const result = queryBuilderStateSchema.safeParse(
+      state({ fields: [COUNT_SELECT_FIELD, FIELDS_ALL_SELECT_FIELD] }),
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe(
+        "COUNT() と FIELDS(ALL) は同時に選択できません",
+      );
+    }
   });
 
   it("特殊フィールドと通常フィールドの同時選択を拒否する", () => {
-    expect(firstMessage(state({ fields: [COUNT_SELECT_FIELD, "Name"] }))).toBe(
-      "COUNT() / FIELDS(ALL) は他のフィールドと同時に選択できません",
+    const result = queryBuilderStateSchema.safeParse(
+      state({ fields: [COUNT_SELECT_FIELD, "Name"] }),
     );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe(
+        "COUNT() / FIELDS(ALL) は他のフィールドと同時に選択できません",
+      );
+    }
   });
 
   it.each(["", "201"])(
     "FIELDS(ALL) では LIMIT 200 以下を必須にする: %s",
     (limit) => {
-      expect(
-        firstMessage(state({ fields: [FIELDS_ALL_SELECT_FIELD], limit })),
-      ).toBe(
-        "FIELDS(ALL) を使用する場合は LIMIT を 200 以下で入力してください",
+      const result = queryBuilderStateSchema.safeParse(
+        state({ fields: [FIELDS_ALL_SELECT_FIELD], limit }),
       );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0]?.message).toBe(
+          "FIELDS(ALL) を使用する場合は LIMIT を 200 以下で入力してください",
+        );
+      }
     },
   );
 
@@ -94,12 +111,7 @@ describe("SOQLビルダー検証メッセージ", () => {
   });
 });
 
-function firstMessage(input: QueryBuilderState): string | undefined {
-  const result = queryBuilderStateSchema.safeParse(input);
-  if (result.success) return undefined;
-  return result.error.issues[0]?.message;
-}
-
+// QueryBuilderState の標準ケースを作る。各テストでは検証対象の差分だけ patch で上書きする。
 function state(patch: Partial<QueryBuilderState>): QueryBuilderState {
   return {
     objectName: "Account",
