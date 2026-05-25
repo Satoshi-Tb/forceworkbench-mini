@@ -27,6 +27,7 @@ import {
 } from "../../state/workbench/atoms";
 import type { WorkbenchTab } from "../../state/workbench/types";
 import { buildSoql, type QueryBuilderState } from "../../utils/soqlBuilder";
+import { getQueryBuilderValidationMessage } from "../../utils/soqlValidation";
 
 type SoqlTab = Extract<WorkbenchTab, { kind: "soql" }>;
 
@@ -41,6 +42,9 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
     soqlCsvEncodingAtomFamily(tab.id),
   );
   const [result, setResult] = useState<QueryResult | null>(null);
+  const [builderValidationError, setBuilderValidationError] = useState<
+    string | null
+  >(null);
   const runSoql = useRunSoql();
   const exportCsv = useExportCsv();
   const {
@@ -76,29 +80,51 @@ export function SoqlTabContent({ tab }: { tab: SoqlTab }) {
   const handleBuilderChange = (nextBuilderState: QueryBuilderState) => {
     setBuilderState(nextBuilderState);
     setManualSoqlOverride(null);
+    setBuilderValidationError(null);
+  };
+
+  const runWithValidation = (action: () => void) => {
+    const validationError =
+      manualSoqlOverride === null
+        ? getQueryBuilderValidationMessage(builderState)
+        : null;
+    if (validationError) {
+      setBuilderValidationError(validationError);
+      return;
+    }
+
+    setBuilderValidationError(null);
+    action();
   };
 
   const handleRun = () => {
-    exportCsv.reset();
-    runSoql.reset();
-    runSoql.mutate(soql, {
-      onSuccess: (data) => {
-        setResult(data);
-      },
+    runWithValidation(() => {
+      exportCsv.reset();
+      runSoql.reset();
+      runSoql.mutate(soql, {
+        onSuccess: (data) => {
+          setResult(data);
+        },
+      });
     });
   };
 
   const handleCsv = () => {
-    exportCsv.reset();
-    exportCsv.mutate({
-      soql,
-      encoding: csvEncoding,
-      filename: `query_${formatJstTimestamp(new Date())}.csv`,
+    runWithValidation(() => {
+      exportCsv.reset();
+      exportCsv.mutate({
+        soql,
+        encoding: csvEncoding,
+        filename: `query_${formatJstTimestamp(new Date())}.csv`,
+      });
     });
   };
 
   return (
     <Stack spacing={2}>
+      {builderValidationError && (
+        <Alert severity="error">{builderValidationError}</Alert>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       {objectsError && (
         <Alert severity="error">オブジェクト情報の取得に失敗しました</Alert>

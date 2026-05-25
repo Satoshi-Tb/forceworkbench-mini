@@ -1,0 +1,78 @@
+import { z } from "zod";
+import {
+  COUNT_SELECT_FIELD,
+  FIELDS_ALL_SELECT_FIELD,
+  queryOperators,
+  type QueryBuilderState,
+} from "./soqlBuilder";
+
+const queryConditionSchema = z.object({
+  id: z.string().min(1),
+  field: z.string(),
+  operator: z.enum(queryOperators),
+  value: z.string().trim(),
+});
+
+const queryOrderSchema = z.object({
+  id: z.string().min(1),
+  field: z.string(),
+  direction: z.enum(["ASC", "DESC"]),
+  nullsOrder: z.enum(["FIRST", "LAST"]),
+});
+
+export const queryBuilderStateSchema = z
+  .object({
+    objectName: z.string().trim().min(1, "オブジェクトを選択してください"),
+    fields: z.array(z.string().min(1)).min(1, "フィールドを選択してください"),
+    orders: z.array(queryOrderSchema),
+    limit: z
+      .string()
+      .refine(isValidLimitInput, "LIMIT は正の整数で入力してください"),
+    conditions: z.array(queryConditionSchema),
+  })
+  .superRefine((state, ctx) => {
+    const selectedSpecialFields = state.fields.filter(
+      (field) =>
+        field === COUNT_SELECT_FIELD || field === FIELDS_ALL_SELECT_FIELD,
+    );
+
+    if (selectedSpecialFields.length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fields"],
+        message: "COUNT() と FIELDS(ALL) は同時に選択できません",
+      });
+    }
+
+    if (selectedSpecialFields.length === 1 && state.fields.length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fields"],
+        message: "COUNT() / FIELDS(ALL) は他のフィールドと同時に選択できません",
+      });
+    }
+
+    if (
+      state.fields.includes(FIELDS_ALL_SELECT_FIELD) &&
+      (state.limit === "" || Number(state.limit) > 200)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["limit"],
+        message:
+          "FIELDS(ALL) を使用する場合は LIMIT を 200 以下で入力してください",
+      });
+    }
+  });
+
+export function getQueryBuilderValidationMessage(
+  state: QueryBuilderState,
+): string | null {
+  const result = queryBuilderStateSchema.safeParse(state);
+  if (result.success) return null;
+  return result.error.issues[0]?.message ?? "クエリ条件を確認してください";
+}
+
+export function isValidLimitInput(limit: string): boolean {
+  return limit === "" || /^[1-9]\d*$/.test(limit);
+}
