@@ -1,3 +1,6 @@
 dist
+e2e-static
 node_modules
+playwright-report
+test-results
 *.tsbuildinfo

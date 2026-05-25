@@ -40,10 +40,11 @@
 ## テスト戦略
 
 - **単体テストは Vitest を採用する**。スコープは `frontend/src/utils/*` の純粋関数・入力チェック (Zod スキーマ含む)・`hooks` の純粋部分に限定する。**見た目 (描画) のテストは実施しない** (フレーキー回避のため `jsdom` / `@testing-library/react` / `MSW` は導入しない)。
+- 単体テストは `npm run test` で実行する。テストファイルは `frontend/src/**/*.test.ts` に置く。非公開 helper (`formatCondition` / `formatValue` など) はテストのためだけに export せず、公開関数経由で挙動を確認する。
 - **E2E テストは Playwright を採用する**。バックエンドは `application-mock` プロファイルで起動し、Playwright の `webServer` 設定経由で自動起動する (実 Salesforce 接続なし)。**正常系を中心**に画面遷移・主要シナリオを検証する。
-- **入力エラー表示は画面ごとに wiring smoke を 1 件だけ E2E に残す**。Zod スキーマのルール網羅は Vitest 側で行い、E2E では「空送信 → エラー表示が出る」の 1 件だけで `zodResolver` の繋ぎ込みを確認する。
+- E2E は `npm run test:e2e` で実行する。内部で `npm run build:e2e` によりフロントエンドを `frontend/e2e-static` にビルドし、Playwright は Spring Boot backend 1 本だけを `webServer` で起動して静的ファイルも配信する。テストファイルは `frontend/e2e/**/*.spec.ts` に置く。
+- **入力エラー表示は画面ごとに wiring smoke を 1 件だけ E2E に残す**。Zod スキーマのルール網羅は Vitest 側で行う。未入力時に送信ボタンを非活性化する画面では、空送信ではなく UI から到達可能な入力エラーで wiring を確認する。
 - スナップショット / ビジュアルリグレッション / アクセシビリティ自動検査は採用しない。
 - CI 必須化は本方針のスコープ外 (別 issue で扱う)。
-- 本 ADR 採択時点ではテスト基盤・テストコードは未追加。実装は issue #26 で issue #11 (Zod 導入) 完了後に着手する。
 
 詳細・検討経緯・代替案: [docs/adr/0002-frontend-test-strategy.md](../docs/adr/0002-frontend-test-strategy.md)

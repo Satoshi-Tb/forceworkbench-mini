@@ -48,7 +48,7 @@
 - フォーマッタ: `npm run format`
 - リント: `npm run lint`
 - ビルド: `npm run build`
-- 単体テスト: 方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Vitest を採用・純粋関数と入力チェックに限定・見た目テストは行わない)。テスト基盤と `npm run test` スクリプトの追加は issue #26 で実施する (issue #11 完了後)
+- 単体テスト: `npm run test`。方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Vitest を採用・純粋関数と入力チェックに限定・見た目テストは行わない)。
 
 **バックエンド:**
 
@@ -59,4 +59,4 @@
 
 **E2Eテスト:**
 
-- 方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Playwright を採用・正常系中心・バックエンドは `application-mock` プロファイルで `webServer` 経由自動起動)。テスト基盤と `npm run test:e2e` スクリプトの追加は issue #26 で実施する
+- `npm run test:e2e`。方針は `docs/adr/0002-frontend-test-strategy.md` に従う (Playwright を採用・正常系中心・バックエンドは `application-mock` プロファイルで `webServer` 経由自動起動)。
