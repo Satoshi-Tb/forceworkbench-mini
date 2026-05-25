@@ -108,6 +108,13 @@ E2E テストは **Playwright** を採用する。
 - フロントエンドコードを変更する PR では、変更内容に応じて `npm run test` を実行して PASS であることを確認する
 - E2E が壊れた場合、`@test.skip` / `@test.fixme` で逃げない。原因を直すかテスト側を修正する
 
+### 9. issue #26 での実装ルール
+
+- 単体テストは `frontend/src/**/*.test.ts` に配置し、`npm run test` で実行する。Vitest は `src/**/*.test.ts` のみを対象にし、`frontend/e2e/` は拾わない。
+- E2E テストは `frontend/e2e/**/*.spec.ts` に配置し、`npm run test:e2e` で実行する。内部で `npm run build:e2e` によりフロントエンドを `frontend/e2e-static` にビルドし、Playwright の `webServer` は Spring Boot backend 1 本だけを `application-mock` プロファイルで起動する。
+- SOQL ビルダーは未入力時に実行ボタンが非活性になるため、必須未入力ルールは Vitest で網羅する。E2E の wiring smoke は `LIMIT` 不正値など、現行 UI から到達可能な入力エラーで確認する。
+- Account の mock query データは DataGrid のクライアントサイドページングを確認できるよう、1ページ目 CSV に既定 page size (25) を超える行数を持たせる。CSV エクスポートの全件確認では 2ページ目 CSV の行も含まれることを検証する。
+
 ## Consequences
 
 ### Positive
