@@ -54,13 +54,13 @@ export const queryBuilderStateSchema = z
 
     if (
       state.fields.includes(FIELDS_ALL_SELECT_FIELD) &&
-      state.limit !== "" &&
-      Number(state.limit) > 200
+      (state.limit === "" || Number(state.limit) > 200)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["limit"],
-        message: "FIELDS(ALL) の LIMIT は 200 以下にしてください",
+        message:
+          "FIELDS(ALL) を使用する場合は LIMIT を 200 以下で入力してください",
       });
     }
   });
